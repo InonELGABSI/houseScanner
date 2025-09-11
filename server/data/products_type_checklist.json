@@ -1,0 +1,506 @@
+{
+  "description": "Comprehensive list of furniture and appliances for all room types. Each item is checked for existence and overall condition. Subitems capture facet-level condition when visible in images.",
+  "items": [
+    {
+      "id": "bed",
+      "title": "Bed",
+      "type": "conditional",
+      "description": "Check if a bed exists; rate overall and frame condition",
+      "subitems": [
+        {
+          "id": "frame_condition",
+          "title": "Bed Frame",
+          "type": "categorical",
+          "options": ["Poor", "Average", "Good", "Excellent", "N/A"]
+        }
+      ]
+    },
+    {
+      "id": "mattress",
+      "title": "Mattress",
+      "type": "conditional",
+      "description": "Check if a mattress exists; rate overall and surface/wear",
+      "subitems": [
+        {
+          "id": "mattress_surface",
+          "title": "Surface / Wear",
+          "type": "categorical",
+          "options": ["Poor", "Average", "Good", "Excellent", "N/A"]
+        }
+      ]
+    },
+    {
+      "id": "sofa",
+      "title": "Sofa / Couch",
+      "type": "conditional",
+      "description": "Check if a sofa exists; rate overall, upholstery and frame",
+      "subitems": [
+        {
+          "id": "upholstery_condition",
+          "title": "Upholstery",
+          "type": "categorical",
+          "options": ["Poor", "Average", "Good", "Excellent", "N/A"]
+        },
+        {
+          "id": "frame_condition",
+          "title": "Internal Frame / Structure",
+          "type": "categorical",
+          "options": ["Poor", "Average", "Good", "Excellent", "N/A"]
+        }
+      ]
+    },
+    {
+      "id": "armchair",
+      "title": "Armchair",
+      "type": "conditional",
+      "description": "Check armchair presence; rate upholstery and stability",
+      "subitems": [
+        {
+          "id": "upholstery_condition",
+          "title": "Upholstery",
+          "type": "categorical",
+          "options": ["Poor", "Average", "Good", "Excellent", "N/A"]
+        },
+        {
+          "id": "stability",
+          "title": "Stability / Wobble",
+          "type": "categorical",
+          "options": ["Poor", "Average", "Good", "Excellent", "N/A"]
+        }
+      ]
+    },
+    {
+      "id": "dining_table",
+      "title": "Dining Table",
+      "type": "conditional",
+      "description": "Check dining table presence; rate surface and leg stability",
+      "subitems": [
+        {
+          "id": "surface_condition",
+          "title": "Top Surface / Finish",
+          "type": "categorical",
+          "options": ["Poor", "Average", "Good", "Excellent", "N/A"]
+        },
+        {
+          "id": "legs_stability",
+          "title": "Legs Stability / Wobble",
+          "type": "categorical",
+          "options": ["Poor", "Average", "Good", "Excellent", "N/A"]
+        }
+      ]
+    },
+    {
+      "id": "dining_chairs",
+      "title": "Dining Chairs",
+      "type": "conditional",
+      "description": "Check dining chairs presence; rate seat and stability",
+      "subitems": [
+        {
+          "id": "seat_condition",
+          "title": "Seat / Cushion / Finish",
+          "type": "categorical",
+          "options": ["Poor", "Average", "Good", "Excellent", "N/A"]
+        },
+        {
+          "id": "stability",
+          "title": "Stability / Wobble",
+          "type": "categorical",
+          "options": ["Poor", "Average", "Good", "Excellent", "N/A"]
+        }
+      ]
+    },
+    {
+      "id": "desk",
+      "title": "Desk / Work Table",
+      "type": "conditional",
+      "description": "Check desk presence; rate surface and storage condition",
+      "subitems": [
+        {
+          "id": "surface_condition",
+          "title": "Top Surface / Finish",
+          "type": "categorical",
+          "options": ["Poor", "Average", "Good", "Excellent", "N/A"]
+        },
+        {
+          "id": "storage_condition",
+          "title": "Drawers / Storage",
+          "type": "categorical",
+          "options": ["Poor", "Average", "Good", "Excellent", "N/A"]
+        }
+      ]
+    },
+    {
+      "id": "office_chair",
+      "title": "Office Chair",
+      "type": "conditional",
+      "description": "Check office chair presence; rate upholstery and mechanism",
+      "subitems": [
+        {
+          "id": "upholstery_condition",
+          "title": "Upholstery",
+          "type": "categorical",
+          "options": ["Poor", "Average", "Good", "Excellent", "N/A"]
+        },
+        {
+          "id": "mechanism_condition",
+          "title": "Base / Casters / Gas Lift (visible)",
+          "type": "categorical",
+          "options": ["Poor", "Average", "Good", "Excellent", "N/A"]
+        }
+      ]
+    },
+    {
+      "id": "bookshelf",
+      "title": "Bookshelf / Storage Shelf",
+      "type": "conditional",
+      "description": "Check bookshelf presence; rate shelves and stability",
+      "subitems": [
+        {
+          "id": "shelves_condition",
+          "title": "Shelves / Finish / Sagging",
+          "type": "categorical",
+          "options": ["Poor", "Average", "Good", "Excellent", "N/A"]
+        },
+        {
+          "id": "stability",
+          "title": "Anchoring / Stability (visible)",
+          "type": "categorical",
+          "options": ["Poor", "Average", "Good", "Excellent", "N/A"]
+        }
+      ]
+    },
+    {
+      "id": "wardrobe",
+      "title": "Wardrobe / Closet",
+      "type": "conditional",
+      "description": "Check wardrobe presence; rate doors and interior",
+      "subitems": [
+        {
+          "id": "doors_alignment",
+          "title": "Doors Alignment / Hinges / Tracks",
+          "type": "categorical",
+          "options": ["Poor", "Average", "Good", "Excellent", "N/A"]
+        },
+        {
+          "id": "interior_condition",
+          "title": "Interior / Shelves / Rails",
+          "type": "categorical",
+          "options": ["Poor", "Average", "Good", "Excellent", "N/A"]
+        }
+      ]
+    },
+    {
+      "id": "nightstand",
+      "title": "Nightstand / Side Table",
+      "type": "conditional",
+      "description": "Check nightstand presence; rate surface and drawers",
+      "subitems": [
+        {
+          "id": "surface_condition",
+          "title": "Top Surface / Finish",
+          "type": "categorical",
+          "options": ["Poor", "Average", "Good", "Excellent", "N/A"]
+        },
+        {
+          "id": "drawers_condition",
+          "title": "Drawers / Handles (visible)",
+          "type": "categorical",
+          "options": ["Poor", "Average", "Good", "Excellent", "N/A"]
+        }
+      ]
+    },
+    {
+      "id": "coffee_table",
+      "title": "Coffee Table",
+      "type": "conditional",
+      "description": "Check coffee table presence; rate surface and stability",
+      "subitems": [
+        {
+          "id": "surface_condition",
+          "title": "Top Surface / Finish",
+          "type": "categorical",
+          "options": ["Poor", "Average", "Good", "Excellent", "N/A"]
+        },
+        {
+          "id": "legs_stability",
+          "title": "Legs Stability / Wobble",
+          "type": "categorical",
+          "options": ["Poor", "Average", "Good", "Excellent", "N/A"]
+        }
+      ]
+    },
+    {
+      "id": "tv_unit",
+      "title": "TV Unit / Stand",
+      "type": "conditional",
+      "description": "Check TV unit presence; rate surfaces and shelves/doors",
+      "subitems": [
+        {
+          "id": "surface_condition",
+          "title": "Top / Facade / Finish",
+          "type": "categorical",
+          "options": ["Poor", "Average", "Good", "Excellent", "N/A"]
+        },
+        {
+          "id": "storage_condition",
+          "title": "Shelves / Doors (visible)",
+          "type": "categorical",
+          "options": ["Poor", "Average", "Good", "Excellent", "N/A"]
+        }
+      ]
+    },
+
+    {
+      "id": "fridge",
+      "title": "Refrigerator",
+      "type": "conditional",
+      "description": "Check refrigerator presence; rate exterior/interior and gasket",
+      "subitems": [
+        {
+          "id": "exterior_condition",
+          "title": "Exterior / Dents / Rust",
+          "type": "categorical",
+          "options": ["Poor", "Average", "Good", "Excellent", "N/A"]
+        },
+        {
+          "id": "interior_cleanliness",
+          "title": "Interior Cleanliness / Shelves (visible)",
+          "type": "categorical",
+          "options": ["Poor", "Average", "Good", "Excellent", "N/A"]
+        },
+        {
+          "id": "door_gasket",
+          "title": "Door Seal / Gasket (visible)",
+          "type": "categorical",
+          "options": ["Poor", "Average", "Good", "Excellent", "N/A"]
+        }
+      ]
+    },
+    {
+      "id": "stove",
+      "title": "Stove / Cooktop",
+      "type": "conditional",
+      "description": "Check cooktop presence; rate burners and knobs (visible)",
+      "subitems": [
+        {
+          "id": "burners_condition",
+          "title": "Burners / Grates (visible)",
+          "type": "categorical",
+          "options": ["Poor", "Average", "Good", "Excellent", "N/A"]
+        },
+        {
+          "id": "knobs_condition",
+          "title": "Knobs / Controls (visible)",
+          "type": "categorical",
+          "options": ["Poor", "Average", "Good", "Excellent", "N/A"]
+        }
+      ]
+    },
+    {
+      "id": "oven",
+      "title": "Oven",
+      "type": "conditional",
+      "description": "Check oven presence; rate door seal and cavity cleanliness",
+      "subitems": [
+        {
+          "id": "door_seal",
+          "title": "Door Seal / Gasket (visible)",
+          "type": "categorical",
+          "options": ["Poor", "Average", "Good", "Excellent", "N/A"]
+        },
+        {
+          "id": "interior_cleanliness",
+          "title": "Interior Cleanliness / Racks (visible)",
+          "type": "categorical",
+          "options": ["Poor", "Average", "Good", "Excellent", "N/A"]
+        }
+      ]
+    },
+    {
+      "id": "microwave",
+      "title": "Microwave",
+      "type": "conditional",
+      "description": "Check microwave presence; rate exterior and cavity cleanliness",
+      "subitems": [
+        {
+          "id": "exterior_condition",
+          "title": "Exterior / Panel / Handle (visible)",
+          "type": "categorical",
+          "options": ["Poor", "Average", "Good", "Excellent", "N/A"]
+        },
+        {
+          "id": "interior_cleanliness",
+          "title": "Interior Cleanliness / Turntable (visible)",
+          "type": "categorical",
+          "options": ["Poor", "Average", "Good", "Excellent", "N/A"]
+        }
+      ]
+    },
+    {
+      "id": "washing_machine",
+      "title": "Washing Machine",
+      "type": "conditional",
+      "description": "Check washer presence; rate exterior, seal, and panel",
+      "subitems": [
+        {
+          "id": "exterior_condition",
+          "title": "Exterior / Rust / Dents",
+          "type": "categorical",
+          "options": ["Poor", "Average", "Good", "Excellent", "N/A"]
+        },
+        {
+          "id": "door_seal",
+          "title": "Door Seal / Gasket (visible)",
+          "type": "categorical",
+          "options": ["Poor", "Average", "Good", "Excellent", "N/A"]
+        },
+        {
+          "id": "control_panel",
+          "title": "Control Panel / Knobs (visible)",
+          "type": "categorical",
+          "options": ["Poor", "Average", "Good", "Excellent", "N/A"]
+        }
+      ]
+    },
+    {
+      "id": "dryer",
+      "title": "Clothes Dryer",
+      "type": "conditional",
+      "description": "Check dryer presence; rate drum and lint filter (visible)",
+      "subitems": [
+        {
+          "id": "drum_condition",
+          "title": "Drum / Interior (visible)",
+          "type": "categorical",
+          "options": ["Poor", "Average", "Good", "Excellent", "N/A"]
+        },
+        {
+          "id": "lint_filter",
+          "title": "Lint Filter Area (visible)",
+          "type": "categorical",
+          "options": ["Poor", "Average", "Good", "Excellent", "N/A"]
+        }
+      ]
+    },
+    {
+      "id": "dishwasher",
+      "title": "Dishwasher",
+      "type": "conditional",
+      "description": "Check dishwasher presence; rate racks and door seal (visible)",
+      "subitems": [
+        {
+          "id": "racks_condition",
+          "title": "Racks / Trays (visible)",
+          "type": "categorical",
+          "options": ["Poor", "Average", "Good", "Excellent", "N/A"]
+        },
+        {
+          "id": "door_seal",
+          "title": "Door Seal / Gasket (visible)",
+          "type": "categorical",
+          "options": ["Poor", "Average", "Good", "Excellent", "N/A"]
+        }
+      ]
+    },
+    {
+      "id": "water_heater",
+      "title": "Water Heater / Boiler",
+      "type": "conditional",
+      "description": "Check water heater presence; rate casing and piping (visible)",
+      "subitems": [
+        {
+          "id": "casing_condition",
+          "title": "Casing / Rust / Dents (visible)",
+          "type": "categorical",
+          "options": ["Poor", "Average", "Good", "Excellent", "N/A"]
+        },
+        {
+          "id": "piping_condition",
+          "title": "Visible Piping / Connections",
+          "type": "categorical",
+          "options": ["Poor", "Average", "Good", "Excellent", "N/A"]
+        }
+      ]
+    },
+    {
+      "id": "air_conditioner",
+      "title": "Air Conditioner / HVAC",
+      "type": "conditional",
+      "description": "Check AC unit presence; rate filters and vents (visible)",
+      "subitems": [
+        {
+          "id": "filters_condition",
+          "title": "Filters / Grilles (visible)",
+          "type": "categorical",
+          "options": ["Poor", "Average", "Good", "Excellent", "N/A"]
+        },
+        {
+          "id": "exterior_condition",
+          "title": "Casing / Panel / Fins (visible)",
+          "type": "categorical",
+          "options": ["Poor", "Average", "Good", "Excellent", "N/A"]
+        }
+      ]
+    },
+    {
+      "id": "heater",
+      "title": "Room Heater / Radiator",
+      "type": "conditional",
+      "description": "Check heater/radiator presence; rate surface and valves (visible)",
+      "subitems": [
+        {
+          "id": "surface_condition",
+          "title": "Surface / Rust / Paint (visible)",
+          "type": "categorical",
+          "options": ["Poor", "Average", "Good", "Excellent", "N/A"]
+        },
+        {
+          "id": "valves_condition",
+          "title": "Valves / Controls (visible)",
+          "type": "categorical",
+          "options": ["Poor", "Average", "Good", "Excellent", "N/A"]
+        }
+      ]
+    },
+    {
+      "id": "ceiling_fan",
+      "title": "Ceiling Fan",
+      "type": "conditional",
+      "description": "Check ceiling fan presence; rate blades and mounting (visible)",
+      "subitems": [
+        {
+          "id": "blades_condition",
+          "title": "Blades / Dirt / Damage (visible)",
+          "type": "categorical",
+          "options": ["Poor", "Average", "Good", "Excellent", "N/A"]
+        },
+        {
+          "id": "mounting_stability",
+          "title": "Mounting / Wobble (visible)",
+          "type": "categorical",
+          "options": ["Poor", "Average", "Good", "Excellent", "N/A"]
+        }
+      ]
+    },
+    {
+      "id": "lamp",
+      "title": "Table / Floor Lamp",
+      "type": "conditional",
+      "description": "Check lamp presence; rate shade and base (visible)",
+      "subitems": [
+        {
+          "id": "shade_condition",
+          "title": "Shade / Diffuser (visible)",
+          "type": "categorical",
+          "options": ["Poor", "Average", "Good", "Excellent", "N/A"]
+        },
+        {
+          "id": "base_condition",
+          "title": "Base / Stand (visible)",
+          "type": "categorical",
+          "options": ["Poor", "Average", "Good", "Excellent", "N/A"]
+        }
+      ]
+    }
+  ]
+}

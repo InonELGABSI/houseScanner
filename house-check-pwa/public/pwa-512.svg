@@ -1,0 +1,28 @@
+<svg width="512" height="512" viewBox="0 0 512 512" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <rect width="512" height="512" rx="64" fill="#0f172a"/>
+  <rect x="32" y="32" width="448" height="448" rx="32" fill="#1e293b"/>
+  
+  <!-- House Icon -->
+  <g transform="translate(128, 128)">
+    <!-- House base -->
+    <rect x="40" y="100" width="176" height="128" rx="12" fill="#22c55e"/>
+    
+    <!-- Roof -->
+    <path d="M32 100 L128 40 L224 100 Z" fill="#16a34a"/>
+    
+    <!-- Door -->
+    <rect x="100" y="160" width="56" height="68" rx="6" fill="#15803d"/>
+    
+    <!-- Windows -->
+    <rect x="60" y="130" width="32" height="32" rx="6" fill="#86efac"/>
+    <rect x="164" y="130" width="32" height="32" rx="6" fill="#86efac"/>
+    
+    <!-- Camera icon overlay -->
+    <circle cx="180" cy="80" r="20" fill="#ef4444"/>
+    <circle cx="180" cy="80" r="12" fill="#ffffff"/>
+    <rect x="175" y="75" width="10" height="10" rx="2" fill="#ef4444"/>
+  </g>
+  
+  <!-- App name -->
+  <text x="256" y="380" text-anchor="middle" fill="#22c55e" font-family="Inter, sans-serif" font-size="32" font-weight="600">House Scanner</text>
+</svg>

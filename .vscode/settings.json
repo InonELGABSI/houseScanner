@@ -1,0 +1,9 @@
+{
+  "mcp.enabled": true,
+  "mcp.servers": {
+    "browser-tools": {
+      "command": "npx",
+      "args": ["@agentdeskai/browser-tools-mcp@latest"]
+    }
+  }
+}

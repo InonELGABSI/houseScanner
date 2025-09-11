@@ -1,0 +1,100 @@
+{
+  "user_id": "mock_user_123",
+  "global": [
+    {
+      "id": "visible_mold",
+      "title": "Visible Mold",
+      "type": "boolean",
+      "description": "Check for visible mold or mildew on walls, ceilings, or corners"
+    },
+    {
+      "id": "paint_condition",
+      "title": "Paint Condition",
+      "type": "categorical",
+      "options": ["Peeling", "Stained", "Good", "Fresh"],
+      "description": "Assess the condition of visible wall/ceiling paint"
+    }
+  ],
+
+  "house_level": [
+    {
+      "id": "roof_visibility",
+      "title": "Roof Visible Damage",
+      "type": "boolean",
+      "description": "Check for cracked tiles, holes, or missing roof elements"
+    },
+    {
+      "id": "exterior_walls",
+      "title": "Exterior Walls Condition",
+      "type": "categorical",
+      "options": ["Cracked", "Stained", "Good", "Excellent"],
+      "description": "Assess visible exterior walls from outside photos"
+    }
+  ],
+
+  "room_level": [
+    {
+      "room_id": "bathroom",
+      "custom_items": [
+        {
+          "id": "mirror_condition",
+          "title": "Mirror Condition",
+          "type": "categorical",
+          "options": ["Cracked", "Stained", "Good", "Excellent"],
+          "description": "Check if bathroom mirrors are intact and clean"
+        }
+      ]
+    },
+    {
+      "room_id": "kitchen",
+      "custom_items": [
+        {
+          "id": "countertop_condition",
+          "title": "Countertop Condition",
+          "type": "categorical",
+          "options": ["Cracked", "Stained", "Good", "Excellent"],
+          "description": "Check if kitchen countertop surface is in good shape"
+        }
+      ]
+    },
+    {
+      "room_id": "bedroom",
+      "custom_items": [
+        {
+          "id": "curtains",
+          "title": "Curtains / Blinds Condition",
+          "type": "categorical",
+          "options": ["Missing", "Poor", "Average", "Good", "Excellent"],
+          "description": "Check if curtains or blinds exist and their condition"
+        }
+      ]
+    }
+  ],
+
+  "product_level": [
+    {
+      "product_id": "fridge",
+      "custom_items": [
+        {
+          "id": "door_condition",
+          "title": "Fridge Door Condition",
+          "type": "categorical",
+          "options": ["Dented", "Stained", "Good", "Excellent"],
+          "description": "Check fridge door appearance for dents or rust"
+        }
+      ]
+    },
+    {
+      "product_id": "sofa",
+      "custom_items": [
+        {
+          "id": "upholstery_condition",
+          "title": "Upholstery Condition",
+          "type": "categorical",
+          "options": ["Torn", "Stained", "Good", "Excellent"],
+          "description": "Check sofa fabric or leather for visible wear"
+        }
+      ]
+    }
+  ]
+}
