@@ -25,11 +25,6 @@ class RunScanUseCase:
     """
     Use case for orchestrating the complete scan pipeline with URLs.
     
-    Production/Deploy Mode:
-    - Receives final merged checklists from client request
-    - Service has NO knowledge of base/custom checklist concepts
-    - Focuses purely on URL fetching, image preprocessing, and orchestration
-    - Client handles all merging logic before sending request
     """
     
     def __init__(
@@ -37,11 +32,13 @@ class RunScanUseCase:
         image_fetcher: ImageFetcher,
         agents_service: AgentsService,
         cost_manager: CostManager,
+        execution_tracker,
         settings: Settings,
     ):
         self.image_fetcher = image_fetcher
         self.agents_service = agents_service
         self.cost_manager = cost_manager
+        self.execution_tracker = execution_tracker
         self.settings = settings
         self.preprocessor = ImagePreprocessor(settings)
         self.aggregator = ResultAggregator()
@@ -85,7 +82,8 @@ class RunScanUseCase:
             agent_pipeline = RunAgentPipelineUseCase(
                 agents_service=self.agents_service,
                 cost_manager=self.cost_manager,
-                settings=self.settings
+                settings=self.settings,
+                execution_tracker=self.execution_tracker
             )
             
             result = await agent_pipeline.execute(
@@ -97,16 +95,19 @@ class RunScanUseCase:
                 request_id=request_id
             )
             
-            # Step 3: Generate client summary
-            client_summary = self.aggregator.generate_client_summary(result)
+            # Step 3: Generate client summary with checklist metadata preserved
+            client_summary = self.aggregator.generate_client_summary(
+                result,
+                house_checklist_def=house_checklist,
+                rooms_checklist_def=rooms_checklist,
+                products_checklist_def=products_checklist
+            )
             
-            # Step 4: Collect cost information
+            # Step 4: Collect cost information and agent executions
             cost_info = await self.cost_manager.get_usage_summary()
+            agent_executions = self.execution_tracker.get_executions()
             
             execution_time = time.time() - start_time
-            
-            # Get final cost summary
-            cost_info = await self.cost_manager.get_usage_summary()
             
             metadata = {
                 "request_id": request_id,
@@ -114,12 +115,14 @@ class RunScanUseCase:
                 "timestamp": datetime.utcnow().isoformat(),
                 "total_images": len(all_images),
                 "rooms_processed": len(result.rooms),
-                "pipeline_version": "2.0.0"
+                "pipeline_version": "2.0.0",
+                "total_agent_executions": len(agent_executions)
             }
             
             logger.info(f"🎉 [REQ-{request_id}] === SCAN PIPELINE COMPLETE ===")
             logger.info(f"⏱️  [REQ-{request_id}] Total execution time: {execution_time:.2f}s")
             logger.info(f"💰 [REQ-{request_id}] Total tokens used: {cost_info['tokens']['total_tokens']}")
+            logger.info(f"📝 [REQ-{request_id}] Total agent executions recorded: {len(agent_executions)}")
             logger.info(f"📊 [REQ-{request_id}] Pipeline summary: "
                        f"house_types={len(result.house_types)}, "
                        f"rooms_processed={len(result.rooms)}, "
@@ -130,6 +133,7 @@ class RunScanUseCase:
                 result=result,
                 client_summary=client_summary,
                 cost_info=cost_info,
+                agent_executions=agent_executions,
                 metadata=metadata
             )
             

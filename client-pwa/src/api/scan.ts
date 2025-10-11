@@ -126,4 +126,10 @@ export const scanAPI = {
     const response = await apiClient.get(`/scans/${scanId}/summary`);
     return response.data;
   },
+
+  // Delete scan (removes scan, rooms, images, summary from DB and storage)
+  deleteScan: async (scanId: string): Promise<{ message: string; scanId: string }> => {
+    const response = await apiClient.delete(`/scans/${scanId}`);
+    return response.data;
+  },
 };

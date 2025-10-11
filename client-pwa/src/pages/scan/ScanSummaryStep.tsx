@@ -101,7 +101,20 @@ export function ScanSummaryStep() {
     navigate('/history');
   };
 
-  const thumbnails = (summary?.images || []).slice(0, 4).map(url => ({ url }));
+  // Extract data from scan details
+  const thumbnails = (scanDetails?.images || []).slice(0, 4);
+  const totalRooms = scanDetails?.rooms.length ?? 0;
+  
+  // Count total products from summary JSON
+  const totalProducts = scanDetails?.summary?.summaryJson?.products 
+    ? Object.keys(scanDetails.summary.summaryJson.products).reduce((count, roomId) => {
+        const roomProducts = scanDetails?.summary?.summaryJson.products[roomId];
+        return count + (roomProducts?.booleans_true?.length || 0);
+      }, 0)
+    : 0;
+
+  const prosConsList = scanDetails?.summary?.prosConsJson || { pros: [], cons: [] };
+  const houseTypes = scanDetails?.detectedHouseTypes || [];
 
   return (
     <div className="min-h-full px-4 pb-6">
@@ -153,15 +166,27 @@ export function ScanSummaryStep() {
           <section className="rounded-2xl border border-emerald-500/20 bg-slate-900/70 p-5">
             <div className="mb-4 flex items-center justify-between">
               <div>
-                <p className="text-xs uppercase tracking-wide text-slate-500">Scan ID</p>
-                <p className="text-lg font-semibold text-slate-100">
-                  {summary?.address || summary?.id.slice(0, 8)}
+                <p className="text-xs uppercase tracking-wide text-slate-500">
+                  {scanDetails?.house.address ? 'Address' : 'Scan ID'}
                 </p>
+                <p className="text-lg font-semibold text-slate-100">
+                  {scanDetails?.house.address || scanDetails?.id.slice(0, 8)}
+                </p>
+                {houseTypes.length > 0 && (
+                  <p className="text-xs text-emerald-400 mt-1 capitalize">
+                    {houseTypes.join(', ')}
+                  </p>
+                )}
               </div>
               <div className="text-right">
-                <p className="text-xs text-slate-500">Captured</p>
+                <p className="text-xs text-slate-500">Completed</p>
                 <p className="text-sm font-medium text-slate-300">
-                  {summary ? new Date(summary.date).toLocaleString() : ''}
+                  {scanDetails?.finishedAt 
+                    ? new Date(scanDetails.finishedAt).toLocaleString() 
+                    : scanDetails?.createdAt 
+                      ? new Date(scanDetails.createdAt).toLocaleString()
+                      : ''
+                  }
                 </p>
               </div>
             </div>
@@ -169,13 +194,13 @@ export function ScanSummaryStep() {
             <div className="grid grid-cols-2 gap-3">
               <div className="rounded-xl bg-slate-800/80 px-4 py-3 text-center">
                 <p className="text-2xl font-bold text-emerald-400">
-                  {summary?.totalRooms ?? 0}
+                  {totalRooms}
                 </p>
                 <p className="text-xs uppercase tracking-wide text-slate-400">Rooms</p>
               </div>
               <div className="rounded-xl bg-slate-800/80 px-4 py-3 text-center">
                 <p className="text-2xl font-bold text-emerald-400">
-                  {summary?.totalProducts ?? 0}
+                  {totalProducts}
                 </p>
                 <p className="text-xs uppercase tracking-wide text-slate-400">Items</p>
               </div>
@@ -188,12 +213,12 @@ export function ScanSummaryStep() {
                 Quick gallery
               </h3>
               <div className="grid grid-cols-2 gap-3">
-                {thumbnails.map(({ url }, index) => (
-                  <div key={url + index} className="relative overflow-hidden rounded-xl">
-                    <img src={url} alt={`Scan image ${index + 1}`} className="h-28 w-full object-cover" />
-                    {index === 3 && summary && summary.images.length > 4 && (
+                {thumbnails.map((image, index) => (
+                  <div key={image.id} className="relative overflow-hidden rounded-xl">
+                    <img src={image.url} alt={`Scan image ${index + 1}`} className="h-28 w-full object-cover" />
+                    {index === 3 && scanDetails && scanDetails.images.length > 4 && (
                       <div className="absolute inset-0 flex items-center justify-center bg-black/60 text-sm font-semibold text-white">
-                        +{summary.images.length - 4}
+                        +{scanDetails.images.length - 4}
                       </div>
                     )}
                   </div>
@@ -202,22 +227,35 @@ export function ScanSummaryStep() {
             </section>
           )}
 
-          {summary?.summary && (
+          {/* Display rooms with detected types */}
+          {scanDetails?.rooms && scanDetails.rooms.length > 0 && (
             <section className="space-y-3 rounded-2xl border border-slate-700/60 bg-slate-900/60 p-5">
               <h3 className="text-sm font-semibold uppercase tracking-wide text-slate-400">
-                Highlights
+                Detected Rooms
               </h3>
-              <p className="text-sm leading-relaxed text-slate-300">{summary.summary}</p>
+              <div className="space-y-2">
+                {scanDetails.rooms.map((room) => (
+                  <div key={room.id} className="flex items-center justify-between text-sm">
+                    <span className="text-slate-300">{room.label}</span>
+                    {room.detectedRoomTypes.length > 0 && (
+                      <span className="text-emerald-400 capitalize text-xs">
+                        {room.detectedRoomTypes.join(', ')}
+                      </span>
+                    )}
+                  </div>
+                ))}
+              </div>
             </section>
           )}
 
-          {summary?.recommendations?.length ? (
-            <section className="space-y-3 rounded-2xl border border-slate-700/60 bg-slate-900/60 p-5">
-              <h3 className="text-sm font-semibold uppercase tracking-wide text-slate-400">
-                Recommendations
+          {/* Display pros */}
+          {prosConsList.pros?.length > 0 && (
+            <section className="space-y-3 rounded-2xl border border-emerald-500/20 bg-slate-900/60 p-5">
+              <h3 className="text-sm font-semibold uppercase tracking-wide text-emerald-400">
+                ✓ Pros
               </h3>
               <ul className="space-y-2 text-sm text-slate-300">
-                {summary.recommendations.map((item, index) => (
+                {prosConsList.pros.map((item: string, index: number) => (
                   <li key={index} className="flex items-start gap-2">
                     <span className="mt-1 text-emerald-400">•</span>
                     <span>{item}</span>
@@ -225,7 +263,24 @@ export function ScanSummaryStep() {
                 ))}
               </ul>
             </section>
-          ) : null}
+          )}
+
+          {/* Display cons */}
+          {prosConsList.cons?.length > 0 && (
+            <section className="space-y-3 rounded-2xl border border-orange-500/20 bg-slate-900/60 p-5">
+              <h3 className="text-sm font-semibold uppercase tracking-wide text-orange-400">
+                ⚠ Cons
+              </h3>
+              <ul className="space-y-2 text-sm text-slate-300">
+                {prosConsList.cons.map((item: string, index: number) => (
+                  <li key={index} className="flex items-start gap-2">
+                    <span className="mt-1 text-orange-400">•</span>
+                    <span>{item}</span>
+                  </li>
+                ))}
+              </ul>
+            </section>
+          )}
 
           <div className="space-y-3">
             <button

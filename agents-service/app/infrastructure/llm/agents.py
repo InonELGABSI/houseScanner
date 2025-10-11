@@ -63,7 +63,8 @@ class AgentsService:
     async def classify_types(
         self,
         input_data: ClassificationInput,
-        cost_manager=None
+        cost_manager=None,
+        execution_tracker=None
     ) -> TypesOutput:
         """
         Agent 1 & 3: Classify house/room types from images.
@@ -71,6 +72,7 @@ class AgentsService:
         Args:
             input_data: Classification input with images, allowed types, and context
             cost_manager: Optional cost tracking manager
+            execution_tracker: Optional execution tracker for raw I/O
             
         Returns:
             TypesOutput with detected types
@@ -128,6 +130,25 @@ class AgentsService:
             logger.info(f"📤 OUTPUT: raw_types={result.types} -> filtered_types={filtered_types}")
             logger.info(f"🎯 RESULT: {len(filtered_types)} valid types detected")
             
+            # Record execution if tracker is provided
+            if execution_tracker:
+                execution_tracker.record_execution(
+                    agent_name=task_label,
+                    input_data={
+                        "prompt": prompt,
+                        "classification_type": task_label,
+                        "allowed_types": input_data.allowed_types,
+                        "num_images": len(input_data.images),
+                        "image_sizes_bytes": image_sizes,
+                    },
+                    output_data={
+                        "raw_types": result.types,
+                        "filtered_types": filtered_types,
+                        "num_types_detected": len(filtered_types),
+                    },
+                    model=self.settings.VISION_MODEL,
+                )
+            
             return TypesOutput(types=filtered_types)
             
         except Exception as e:
@@ -138,7 +159,8 @@ class AgentsService:
     async def evaluate_checklist(
         self,
         input_data: ChecklistEvaluationInput,
-        cost_manager=None
+        cost_manager=None,
+        execution_tracker=None
     ) -> ChecklistEvaluationOutput:
         """
         Agent 2, 4 & 5: Evaluate checklist items from images.
@@ -198,9 +220,12 @@ class AgentsService:
                     f"You are a vision QA agent for {role_label}. "
                     "Analyze the provided images and return a JSON object with keys: "
                     "booleans, categoricals, conditionals. "
-                    "Each key maps item IDs to answers ONLY for this batch. "
+                    "Each key maps item IDs (from ID[...] brackets) to answers ONLY for this batch. "
+                    "IMPORTANT: Use the ID value in brackets (e.g., 'room_cleanliness', 'item_1760129636898'), NOT the label text. "
+                    "The label text in quotes is for your understanding only. "
                     "RULES: include EVERY listed ID exactly once; "
                     "if unsure set boolean false, categorical 'N/A'. "
+                    "For categorical items, choose ONE option from the provided list. "
                     "For conditional items create entry under conditionals: "
                     '{id:{"exists":bool, "condition":Quality|null, "subitems":{subid:Quality,...}|{}}}. '
                     "Allowed Quality values: Poor, Average, Good, Excellent, N/A. "
@@ -243,6 +268,36 @@ class AgentsService:
                            f"categoricals={len(batch_result.categoricals)}, "
                            f"conditionals={len(batch_result.conditionals)}")
                 
+                # Record execution if tracker is provided (per batch)
+                if execution_tracker:
+                    execution_tracker.record_execution(
+                        agent_name=f"{role_label}-batch{batch_count}",
+                        input_data={
+                            "system_prompt": system_prompt,
+                            "human_prompt": human_prompt,
+                            "num_images": len(input_data.images),
+                            "image_sizes_bytes": image_sizes,
+                            "batch_items": [item.get("id") for item in batch],
+                            "batch_size": len(batch),
+                            "batch_number": batch_count,
+                            "total_batches": total_batches,
+                        },
+                        output_data={
+                            "booleans": dict(batch_result.booleans),
+                            "categoricals": dict(batch_result.categoricals),
+                            "conditionals": {
+                                k: v.model_dump() if hasattr(v, 'model_dump') else v
+                                for k, v in batch_result.conditionals.items()
+                            },
+                            "num_results": (
+                                len(batch_result.booleans) + 
+                                len(batch_result.categoricals) + 
+                                len(batch_result.conditionals)
+                            ),
+                        },
+                        model=self.settings.VISION_MODEL,
+                    )
+                
                 # Accumulate results
                 accumulated_results.booleans.update(batch_result.booleans)
                 accumulated_results.categoricals.update(batch_result.categoricals)
@@ -266,7 +321,8 @@ class AgentsService:
     async def analyze_pros_cons(
         self,
         input_data: ProsConsAnalysisInput,
-        cost_manager=None
+        cost_manager=None,
+        execution_tracker=None
     ) -> ProsConsOutput:
         """
         Agent 6: Generate pros/cons from accumulated issues.
@@ -339,6 +395,29 @@ class AgentsService:
             if result.cons:
                 logger.debug(f"❌ Sample cons: {result.cons[:2]}")
             
+            # Record execution if tracker is provided
+            if execution_tracker:
+                execution_tracker.record_execution(
+                    agent_name="pros/cons analysis",
+                    input_data={
+                        "analysis_text": analysis_text,
+                        "num_house_issues": len(house_issues),
+                        "num_room_issues": len(room_issues),
+                        "num_product_issues": len(product_issues),
+                        "total_issues": len(house_issues) + len(room_issues) + len(product_issues),
+                        "house_issues": house_issues[:80],  # Truncated for storage
+                        "room_issues": room_issues[:200],
+                        "product_issues": product_issues[:200],
+                    },
+                    output_data={
+                        "pros": result.pros,
+                        "cons": result.cons,
+                        "num_pros": len(result.pros),
+                        "num_cons": len(result.cons),
+                    },
+                    model=self.settings.TEXT_MODEL,
+                )
+            
             return result
             
         except Exception as e:
@@ -365,20 +444,22 @@ class AgentsService:
         return f"data:{mime};base64,{b64}"
     
     def _items_to_instruction(self, items: List[Dict[str, Any]]) -> str:
-        """Convert checklist items to instruction text."""
+        """Convert checklist items to instruction text with human-readable labels."""
         lines: List[str] = []
         for item in items:
             item_id = item.get("id", "<unknown>")
+            # Use label/title for human-readable text, fallback to id
+            item_label = item.get("label") or item.get("title") or item_id
             item_type = item.get("type")
 
             if item_type == "boolean":
-                lines.append(f"- {item_id} : boolean")
+                lines.append(f"- ID[{item_id}] '{item_label}' : boolean")
                 continue
 
             if item_type == "categorical":
                 options = self._normalize_allowed_options(item.get("options"))
                 option_desc = ", ".join(options) if options else "any"
-                lines.append(f"- {item_id} : categorical in {{{option_desc}}}")
+                lines.append(f"- ID[{item_id}] '{item_label}' : categorical in {{{option_desc}}}")
                 continue
 
             if item_type == "conditional":
@@ -393,12 +474,13 @@ class AgentsService:
                 sub_segments: List[str] = []
                 for sub in subitems:
                     sub_id = sub.get("id", "<sub>")
+                    sub_label = sub.get("label") or sub.get("title") or sub_id
                     sub_options = self._normalize_allowed_options(sub.get("options")) or condition_options
-                    sub_segments.append(f"{sub_id}:{'/'.join(sub_options)}")
+                    sub_segments.append(f"{sub_id}('{sub_label}'):{'/'.join(sub_options)}")
                 sub_desc = ", ".join(sub_segments) if sub_segments else "{}"
 
                 lines.append(
-                    f"- {item_id} : conditional -> exists:boolean, condition in {{{condition_desc}}}, subitems {{{sub_desc}}}"
+                    f"- ID[{item_id}] '{item_label}' : conditional -> exists:boolean, condition in {{{condition_desc}}}, subitems {{{sub_desc}}}"
                 )
 
         return "\n".join(lines)

@@ -16,6 +16,7 @@ export function HistoryPage() {
   const [history, setHistory] = useState<HistoryItem[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string>('');
+  const [deletingId, setDeletingId] = useState<string | null>(null);
   const navigate = useNavigate();
 
   useEffect(() => {
@@ -47,6 +48,29 @@ export function HistoryPage() {
 
   const handleScanClick = (scanId: string) => {
     navigate(`/summary/${scanId}`);
+  };
+
+  const handleDeleteScan = async (scanId: string, event: React.MouseEvent) => {
+    event.stopPropagation(); // Prevent navigation when clicking delete
+    
+    if (!confirm('Are you sure you want to delete this scan? This action cannot be undone.')) {
+      return;
+    }
+
+    try {
+      setDeletingId(scanId);
+      await scanAPI.deleteScan(scanId);
+      
+      // Remove from local state
+      setHistory(prevHistory => prevHistory.filter(item => item.id !== scanId));
+      
+      console.log(`✅ Scan ${scanId} deleted successfully`);
+    } catch (err: any) {
+      console.error('❌ Error deleting scan:', err);
+      alert('Failed to delete scan. Please try again.');
+    } finally {
+      setDeletingId(null);
+    }
   };
 
   const formatDate = (dateString: string) => {
@@ -117,12 +141,14 @@ export function HistoryPage() {
           {history.map((item) => (
             <div
               key={item.id}
-              onClick={() => handleScanClick(item.id)}
-              className="bg-slate-800/50 backdrop-blur-sm border border-slate-700/50 rounded-lg p-4 hover:bg-slate-700/50 transition-all cursor-pointer group"
+              className="bg-slate-800/50 backdrop-blur-sm border border-slate-700/50 rounded-lg p-4 hover:bg-slate-700/50 transition-all group"
             >
               <div className="flex items-center space-x-4">
                 {/* Thumbnail */}
-                <div className="w-12 h-12 rounded-full bg-gradient-to-br from-emerald-500 to-emerald-700 shadow-lg flex items-center justify-center flex-shrink-0">
+                <div 
+                  onClick={() => handleScanClick(item.id)}
+                  className="w-12 h-12 rounded-full bg-gradient-to-br from-emerald-500 to-emerald-700 shadow-lg flex items-center justify-center flex-shrink-0 cursor-pointer"
+                >
                   {item.thumbnail ? (
                     <img
                       src={item.thumbnail}
@@ -135,7 +161,10 @@ export function HistoryPage() {
                 </div>
 
                 {/* Content */}
-                <div className="flex-1 min-w-0">
+                <div 
+                  onClick={() => handleScanClick(item.id)}
+                  className="flex-1 min-w-0 cursor-pointer"
+                >
                   <div className="flex items-center justify-between mb-1">
                     <h3 className="text-slate-200 font-medium truncate">
                       {item.address || `Scan ${item.id.slice(0, 8)}`}
@@ -172,6 +201,22 @@ export function HistoryPage() {
                     </span>
                   </div>
                 </div>
+
+                {/* Delete Button */}
+                <button
+                  onClick={(e) => handleDeleteScan(item.id, e)}
+                  disabled={deletingId === item.id}
+                  className="p-2 text-slate-400 hover:text-red-400 hover:bg-red-500/10 rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex-shrink-0"
+                  title="Delete scan"
+                >
+                  {deletingId === item.id ? (
+                    <div className="w-5 h-5 border-2 border-red-400 border-t-transparent rounded-full animate-spin"></div>
+                  ) : (
+                    <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                    </svg>
+                  )}
+                </button>
               </div>
             </div>
           ))}

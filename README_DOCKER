@@ -1,0 +1,4 @@
+# RUN REDIS AND POSTGRES
+
+cd /Users/inonelgabsi/Desktop/Development/houseScanner/backend
+docker compose up 

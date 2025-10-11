@@ -1,0 +1,177 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider          = "postgresql"
+  url               = env("DATABASE_URL")
+  shadowDatabaseUrl = env("DATABASE_SHADOW_URL")
+}
+
+enum UserRole {
+  user
+  admin
+}
+
+enum HouseStatus {
+  idle
+  active
+  archived
+}
+
+enum ScanStatus {
+  queued
+  running
+  succeeded
+  failed
+}
+
+enum ChecklistScope {
+  house
+  room
+  product
+}
+
+model User {
+  id             String      @id @default(uuid()) @db.Uuid
+  email          String      @unique
+  firstName      String?     @map("first_name")
+  lastName       String?     @map("last_name")
+  passwordHash   String      @map("password_hash")
+  role           UserRole
+  createdAt      DateTime    @default(now()) @map("created_at")
+  updatedAt      DateTime    @updatedAt @map("updated_at")
+  houses         House[]
+  customChecklists Checklist[]
+
+  @@map("users")
+}
+
+model House {
+  id         String      @id @default(uuid()) @db.Uuid
+  userId     String      @map("user_id") @db.Uuid
+  address    String?
+  houseType  String?     @map("house_type")
+  status     HouseStatus @default(idle)
+  createdAt  DateTime    @default(now()) @map("created_at")
+  updatedAt  DateTime    @updatedAt @map("updated_at")
+  user       User        @relation(fields: [userId], references: [id], onDelete: Cascade)
+  scans      Scan[]
+
+  @@index([userId], map: "idx_houses_user")
+  @@map("houses")
+}
+
+model Scan {
+  id                   String      @id @default(uuid()) @db.Uuid
+  houseId              String      @map("house_id") @db.Uuid
+  status               ScanStatus
+  inputsSnapshot       Json        @map("inputs_snapshot")
+  detectedHouseTypes   String[]    @default([]) @map("detected_house_types")
+  startedAt            DateTime?   @map("started_at")
+  finishedAt           DateTime?   @map("finished_at")
+  createdAt            DateTime    @default(now()) @map("created_at")
+  house                House       @relation(fields: [houseId], references: [id], onDelete: Cascade)
+  rooms                Room[]
+  images               HouseRoomImage[]
+  agentRuns            AgentsRun[]
+  summary              HouseScanSummary?
+
+  @@index([houseId, createdAt], map: "idx_scans_house_created")
+  @@map("scans")
+}
+
+model Room {
+  id                 String    @id @default(uuid()) @db.Uuid
+  scanId             String    @map("scan_id") @db.Uuid
+  ordinal            Int
+  label              String?
+  detectedRoomTypes  String[]  @default([]) @map("detected_room_types")
+  createdAt          DateTime  @default(now()) @map("created_at")
+  scan               Scan      @relation(fields: [scanId], references: [id], onDelete: Cascade)
+  images             HouseRoomImage[]
+
+  @@unique([scanId, ordinal])
+  @@map("rooms")
+}
+
+model HouseRoomImage {
+  id        String   @id @default(uuid()) @db.Uuid
+  scanId    String   @map("scan_id") @db.Uuid
+  roomId    String?  @map("room_id") @db.Uuid
+  url       String
+  tag       String?
+  createdAt DateTime @default(now()) @map("created_at")
+  scan      Scan     @relation(fields: [scanId], references: [id], onDelete: Cascade)
+  room      Room?    @relation(fields: [roomId], references: [id])
+
+  @@index([scanId, roomId], map: "idx_images_scan_room")
+  @@map("house_room_images")
+}
+
+model Checklist {
+  id        String         @id @default(uuid()) @db.Uuid
+  scope     ChecklistScope
+  name      String
+  version   Int            @default(1)
+  isBase    Boolean        @default(true) @map("is_base")
+  userId    String?        @map("user_id") @db.Uuid
+  itemsRaw  Json           @map("items_raw")
+  createdAt DateTime       @default(now()) @map("created_at")
+  user      User?          @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([scope, name, version, userId])
+  @@map("checklists")
+}
+
+model ModelInfo {
+  id             String   @id @default(uuid()) @db.Uuid
+  provider       String
+  modelName      String   @map("model_name")
+  version        String?
+  pricing        Json
+  effectiveFrom  DateTime @map("effective_from")
+  effectiveTo    DateTime? @map("effective_to")
+  createdAt      DateTime @default(now()) @map("created_at")
+  agentRuns      AgentsRun[]
+
+  @@index([modelName, effectiveFrom], map: "idx_models_info_model_from")
+  @@unique([modelName, effectiveFrom], map: "uq_model_effective")
+  @@map("models_info")
+}
+
+model AgentsRun {
+  id         String     @id @default(uuid()) @db.Uuid
+  scanId     String     @map("scan_id") @db.Uuid
+  agentName  String     @map("agent_name")
+  modelId    String?    @map("model_id") @db.Uuid
+  inputJson  Json?      @map("input_json")
+  outputJson Json?      @map("output_json")
+  promptHash String?    @map("prompt_hash")
+  tokensIn   Int?       @map("tokens_in")
+  tokensOut  Int?       @map("tokens_out")
+  costUsd    Decimal?   @map("cost_usd")
+  cacheHit   Boolean    @default(false) @map("cache_hit")
+  startedAt  DateTime?  @map("started_at")
+  finishedAt DateTime?  @map("finished_at")
+  createdAt  DateTime   @default(now()) @map("created_at")
+  scan       Scan       @relation(fields: [scanId], references: [id], onDelete: Cascade)
+  model      ModelInfo? @relation(fields: [modelId], references: [id])
+
+  @@index([scanId, agentName, createdAt], map: "idx_agents_runs_scan_agent")
+  @@map("agents_runs")
+}
+
+model HouseScanSummary {
+  id             String   @id @default(uuid()) @db.Uuid
+  scanId         String   @map("scan_id") @db.Uuid
+  summaryJson    Json     @map("summary_json")
+  prosConsJson   Json?    @map("pros_cons_json")
+  costSummary    Json?    @map("cost_summary")
+  schemaVersion  String?  @map("schema_version")
+  derivedAt      DateTime @default(now()) @map("derived_at")
+  scan           Scan     @relation(fields: [scanId], references: [id], onDelete: Cascade)
+
+  @@unique([scanId])
+  @@map("house_scan_summary")
+}

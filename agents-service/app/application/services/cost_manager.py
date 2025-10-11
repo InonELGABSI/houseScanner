@@ -18,6 +18,8 @@ class UsageMetrics:
     requests: int = 0
     model_usage: Dict[str, int] = field(default_factory=dict)
     agent_usage: Dict[str, int] = field(default_factory=dict)
+    # New: detailed per-agent token tracking
+    agent_usage_detailed: Dict[str, Dict[str, int]] = field(default_factory=dict)
     
     def add_usage(self, prompt: int, completion: int, model: str, agent: str = None):
         """Add usage data to metrics."""
@@ -30,6 +32,19 @@ class UsageMetrics:
         
         if agent:
             self.agent_usage[agent] = self.agent_usage.get(agent, 0) + prompt + completion
+            
+            # Track detailed per-agent token breakdown
+            if agent not in self.agent_usage_detailed:
+                self.agent_usage_detailed[agent] = {
+                    "prompt_tokens": 0,
+                    "completion_tokens": 0,
+                    "total_tokens": 0,
+                    "requests": 0
+                }
+            self.agent_usage_detailed[agent]["prompt_tokens"] += prompt
+            self.agent_usage_detailed[agent]["completion_tokens"] += completion
+            self.agent_usage_detailed[agent]["total_tokens"] += prompt + completion
+            self.agent_usage_detailed[agent]["requests"] += 1
 
 
 class CostManager:
@@ -94,6 +109,7 @@ class CostManager:
             },
             "models": dict(self._usage.model_usage),
             "agents": dict(self._usage.agent_usage),
+            "agents_detailed": dict(self._usage.agent_usage_detailed),
             "costs": cost_estimates,
             "session": {
                 "duration_seconds": round(duration, 2),

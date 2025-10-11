@@ -13,6 +13,7 @@ class ScanResponse(BaseModel):
     result: HouseResult
     client_summary: Dict[str, Any]
     cost_info: Dict[str, Any]
+    agent_executions: list[Dict[str, Any]]
     metadata: Dict[str, Any]
 
 

@@ -52,12 +52,33 @@ export function ProcessingPage() {
           });
         }
 
-        // Step 2: Upload files with scanId
+        // Step 2: Group images by room and create rooms array
+        const roomsMap = new Map<number, number[]>(); // roomIndex -> array of image indices in filesToUpload
+        
+        allImages.forEach((img, idx) => {
+          if (img.file) { // Only include images with files
+            const roomIdx = img.roomIndex;
+            if (!roomsMap.has(roomIdx)) {
+              roomsMap.set(roomIdx, []);
+            }
+            roomsMap.get(roomIdx)!.push(idx);
+          }
+        });
+        
+        // Convert map to rooms array format expected by API
+        const rooms = Array.from(roomsMap.entries())
+          .sort(([a], [b]) => a - b) // Sort by room index
+          .map(([_, imageIndices]) => ({
+            imageIndices: imageIndices.map(String), // Convert to string array
+          }));
+        
+        // Step 3: Upload files with scanId and room groupings
         setStage('Uploading images...');
         const uploadResponse = await scanAPI.uploadImagesWithFiles({
           scanId: currentScanId,
           files: filesToUpload,
           address: state.address || undefined,
+          rooms: rooms.length > 0 ? rooms : undefined, // Only include if we have room groupings
         });
 
         dispatch({ 

@@ -6,6 +6,7 @@ from typing import Annotated
 from fastapi import Depends
 
 from app.application.services.cost_manager import CostManager
+from app.application.services.agent_tracker import AgentExecutionTracker
 from app.infrastructure.cache.redis_cache import RedisCache
 from app.infrastructure.llm.agents import AgentsService
 from app.infrastructure.loaders.base_house_loader import BaseHouseLoader
@@ -75,6 +76,11 @@ def get_cost_manager() -> CostManager:
     return CostManager()
 
 
+def get_agent_tracker() -> AgentExecutionTracker:
+    """Get agent execution tracker instance."""
+    return AgentExecutionTracker()
+
+
 def get_agents_service(
     settings: Annotated[Settings, Depends(get_settings_dep)]
 ) -> AgentsService:
@@ -92,4 +98,5 @@ RoomsLoaderDep = Annotated[BaseRoomsLoader, Depends(get_rooms_loader)]
 ProductsLoaderDep = Annotated[BaseProductsLoader, Depends(get_products_loader)]
 CustomUserLoaderDep = Annotated[CustomUserLoader, Depends(get_custom_user_loader)]
 CostManagerDep = Annotated[CostManager, Depends(get_cost_manager)]
+AgentTrackerDep = Annotated[AgentExecutionTracker, Depends(get_agent_tracker)]
 AgentsServiceDep = Annotated[AgentsService, Depends(get_agents_service)]

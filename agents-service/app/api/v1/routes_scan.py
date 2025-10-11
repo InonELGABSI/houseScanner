@@ -20,6 +20,7 @@ from app.core.deps import (
     ImageFetcherDep,
     AgentsServiceDep,
     CostManagerDep,
+    AgentTrackerDep,
 )
 
 logger = logging.getLogger(__name__)
@@ -38,6 +39,7 @@ async def run_scan(
     image_fetcher: ImageFetcherDep,
     agents_service: AgentsServiceDep,
     cost_manager: CostManagerDep,
+    agent_tracker: AgentTrackerDep,
 ):
     """
     Run a comprehensive house scan using image URLs and final merged checklists.
@@ -69,6 +71,7 @@ async def run_scan(
             image_fetcher=image_fetcher,
             agents_service=agents_service,
             cost_manager=cost_manager,
+            execution_tracker=agent_tracker,
             settings=settings,
         )
         

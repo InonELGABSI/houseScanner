@@ -87,15 +87,24 @@ class ResultAggregator:
             "custom": custom_issues,
         }
     
-    def generate_client_summary(self, result: HouseResult) -> Dict[str, Any]:
+    def generate_client_summary(
+        self, 
+        result: HouseResult,
+        house_checklist_def: Dict[str, Any] = None,
+        rooms_checklist_def: Dict[str, Any] = None,
+        products_checklist_def: Dict[str, Any] = None
+    ) -> Dict[str, Any]:
         """
         Generate client-focused summary with booleans true + categoricals.
         
         Args:
             result: Complete house analysis result
+            house_checklist_def: Original house checklist definitions (with titles, descriptions)
+            rooms_checklist_def: Original rooms checklist definitions
+            products_checklist_def: Original products checklist definitions
             
         Returns:
-            Client-friendly summary
+            Client-friendly summary with checklist metadata preserved
         """
         def extract_true_and_categoricals(checklist: ChecklistEvaluationOutput) -> Dict[str, Any]:
             """Extract boolean trues and categoricals from checklist."""
@@ -141,6 +150,13 @@ class ResultAggregator:
             f"pros={len(result.pros_cons.pros)} cons={len(result.pros_cons.cons)}"
         )
         
+        # Build checklist metadata lookup to preserve titles/descriptions
+        checklist_metadata = {
+            "house": self._extract_checklist_metadata(house_checklist_def) if house_checklist_def else {},
+            "rooms": self._extract_checklist_metadata(rooms_checklist_def) if rooms_checklist_def else {},
+            "products": self._extract_checklist_metadata(products_checklist_def) if products_checklist_def else {}
+        }
+        
         return {
             "house": house_summary,
             "rooms": rooms_summary,
@@ -149,7 +165,74 @@ class ResultAggregator:
                 "pros": result.pros_cons.pros,
                 "cons": result.pros_cons.cons
             },
+            "checklist_metadata": checklist_metadata
         }
+    
+    def _extract_checklist_metadata(self, checklist_def: Dict[str, Any]) -> Dict[str, Dict[str, Any]]:
+        """
+        Extract checklist item metadata (id -> {title, description, options, type}).
+        
+        Args:
+            checklist_def: Checklist definition with items
+            
+        Returns:
+            Mapping of item_id -> metadata
+        """
+        metadata = {}
+        
+        try:
+            # Handle default items
+            if "default" in checklist_def and "items" in checklist_def["default"]:
+                for item in checklist_def["default"]["items"]:
+                    if "id" in item:
+                        metadata[item["id"]] = {
+                            "title": item.get("title", ""),
+                            "description": item.get("description", ""),
+                            "type": item.get("type", ""),
+                            "options": item.get("options", [])
+                        }
+            
+            # Handle house_types items
+            if "house_types" in checklist_def:
+                for type_key, type_data in checklist_def["house_types"].items():
+                    if "items" in type_data:
+                        for item in type_data["items"]:
+                            if "id" in item:
+                                metadata[item["id"]] = {
+                                    "title": item.get("title", ""),
+                                    "description": item.get("description", ""),
+                                    "type": item.get("type", ""),
+                                    "options": item.get("options", [])
+                                }
+            
+            # Handle room_types items
+            if "room_types" in checklist_def:
+                for type_key, type_data in checklist_def["room_types"].items():
+                    if "items" in type_data:
+                        for item in type_data["items"]:
+                            if "id" in item:
+                                metadata[item["id"]] = {
+                                    "title": item.get("title", ""),
+                                    "description": item.get("description", ""),
+                                    "type": item.get("type", ""),
+                                    "options": item.get("options", [])
+                                }
+            
+            # Handle flat items array (for products)
+            if "items" in checklist_def and isinstance(checklist_def["items"], list):
+                for item in checklist_def["items"]:
+                    if "id" in item:
+                        metadata[item["id"]] = {
+                            "title": item.get("title", ""),
+                            "description": item.get("description", ""),
+                            "type": item.get("type", ""),
+                            "options": item.get("options", [])
+                        }
+        
+        except Exception as e:
+            logger.warning(f"Error extracting checklist metadata: {e}")
+        
+        return metadata
     
     def _checklist_to_issue_lines(self, prefix: str, answers: ChecklistEvaluationOutput) -> List[str]:
         """

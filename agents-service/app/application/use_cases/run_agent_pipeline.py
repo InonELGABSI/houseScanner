@@ -60,10 +60,12 @@ class RunAgentPipelineUseCase:
         agents_service: AgentsService,
         cost_manager: CostManager,
         settings: Settings,
+        execution_tracker=None,
     ):
         self.agents_service = agents_service
         self.cost_manager = cost_manager
         self.settings = settings
+        self.execution_tracker = execution_tracker
         self.preprocessor = ImagePreprocessor(settings)
         self.aggregator = ResultAggregator()
     
@@ -131,7 +133,7 @@ class RunAgentPipelineUseCase:
                 classification_type="house type"
             )
             house_types_output = await self.agents_service.classify_types(
-                house_classification_input, self.cost_manager
+                house_classification_input, self.cost_manager, self.execution_tracker
             )
             house_types = BusinessRulesPolicy.validate_house_types(house_types_output.types, allowed_house_types)
             logger.info(f"🏠 [REQ-{request_id}] Agent 1 Result: {house_types}")
@@ -140,10 +142,32 @@ class RunAgentPipelineUseCase:
             logger.info(f"🚀 [REQ-{request_id}] === AGENT 2: HOUSE CHECKLIST EVALUATION ===")
             await self._maybe_throttle("agent2")
             
-            # Use pre-merged house checklist items
-            house_items_raw = house_checklist.get("items", [])
+            # Merge default items with house-type-specific items based on detected house types
+            house_items_raw = []
+            seen_ids = set()  # Track IDs to avoid duplicates
+            
+            # Always include default items
             if "default" in house_checklist and "items" in house_checklist["default"]:
-                house_items_raw = house_checklist["default"]["items"]
+                for item in house_checklist["default"]["items"]:
+                    item_id = item.get("id")
+                    if item_id and item_id not in seen_ids:
+                        house_items_raw.append(item)
+                        seen_ids.add(item_id)
+                logger.info(f"📋 [REQ-{request_id}] Added {len(house_checklist['default']['items'])} default house items")
+            
+            # Add house-type-specific items for each detected house type (deduplicate by ID)
+            if "house_types" in house_checklist:
+                for house_type in house_types:
+                    if house_type in house_checklist["house_types"]:
+                        type_items = house_checklist["house_types"][house_type].get("items", [])
+                        added_count = 0
+                        for item in type_items:
+                            item_id = item.get("id")
+                            if item_id and item_id not in seen_ids:
+                                house_items_raw.append(item)
+                                seen_ids.add(item_id)
+                                added_count += 1
+                        logger.info(f"📋 [REQ-{request_id}] Added {added_count}/{len(type_items)} unique items for house type '{house_type}'")
             
             # Convert to AgentChecklistItem models
             house_items = [AgentChecklistItem(**item) if isinstance(item, dict) else item for item in house_items_raw]
@@ -158,7 +182,7 @@ class RunAgentPipelineUseCase:
                 task_label="house checklist"
             )
             house_answers = await self.agents_service.evaluate_checklist(
-                house_checklist_input, self.cost_manager
+                house_checklist_input, self.cost_manager, self.execution_tracker
             )
             total_house_items = len(house_answers.booleans) + len(house_answers.categoricals) + len(house_answers.conditionals)
             logger.info(f"🏠 [REQ-{request_id}] Agent 2 Result: House evaluation completed ({total_house_items} items)")
@@ -194,7 +218,7 @@ class RunAgentPipelineUseCase:
                     classification_type="room type"
                 )
                 room_types_output = await self.agents_service.classify_types(
-                    room_classification_input, self.cost_manager
+                    room_classification_input, self.cost_manager, self.execution_tracker
                 )
                 room_types = BusinessRulesPolicy.validate_room_types(room_types_output.types, allowed_room_types)
                 logger.info(f"🏷️ [REQ-{request_id}] Agent 3 Result: Room '{room_id}' classified as {room_types}")
@@ -203,10 +227,33 @@ class RunAgentPipelineUseCase:
                 logger.info(f"🚀 [REQ-{request_id}] === AGENT 4: ROOM CHECKLIST EVALUATION (Room: {room_id}) ===")
                 await self._maybe_throttle(f"agent4:{room_id}")
                 
-                # Use pre-merged room checklist items
-                room_items_raw = rooms_checklist.get("items", [])
+                # Merge default items with room-type-specific items based on detected room types
+                room_items_raw = []
+                room_seen_ids = set()  # Track IDs to avoid duplicates
+                
+                # Always include default items
                 if "default" in rooms_checklist and "items" in rooms_checklist["default"]:
-                    room_items_raw = rooms_checklist["default"]["items"]
+                    for item in rooms_checklist["default"]["items"]:
+                        item_id = item.get("id")
+                        if item_id and item_id not in room_seen_ids:
+                            room_items_raw.append(item)
+                            room_seen_ids.add(item_id)
+                    logger.info(f"📋 [REQ-{request_id}] Added {len(rooms_checklist['default']['items'])} default room items for room '{room_id}'")
+                
+                # Add room-type-specific items for each detected room type (deduplicate by ID)
+                if "room_types" in rooms_checklist:
+                    for room_type in room_types:
+                        if room_type in rooms_checklist["room_types"]:
+                            type_items = rooms_checklist["room_types"][room_type].get("items", [])
+                            added_count = 0
+                            for item in type_items:
+                                item_id = item.get("id")
+                                if item_id and item_id not in room_seen_ids:
+                                    room_items_raw.append(item)
+                                    room_seen_ids.add(item_id)
+                                    added_count += 1
+                            logger.info(f"📋 [REQ-{request_id}] Added {added_count}/{len(type_items)} unique items for room type '{room_type}' in room '{room_id}'")
+                
                 room_items = [AgentChecklistItem(**item) if isinstance(item, dict) else item for item in room_items_raw]
                 room_chk_images = self.preprocessor.sample_for_checklist(room_images, k=3)
                 logger.info(f"📊 [REQ-{request_id}] Agent 4 Input: {len(room_chk_images)} images, {len(room_items)} checklist items")
@@ -217,7 +264,7 @@ class RunAgentPipelineUseCase:
                     task_label=f"room checklist ({room_id})"
                 )
                 room_answers = await self.agents_service.evaluate_checklist(
-                    room_checklist_input, self.cost_manager
+                    room_checklist_input, self.cost_manager, self.execution_tracker
                 )
                 total_room_items = len(room_answers.booleans) + len(room_answers.categoricals) + len(room_answers.conditionals)
                 logger.info(f"✅ [REQ-{request_id}] Agent 4 Result: Room '{room_id}' checklist evaluated ({total_room_items} items)")
@@ -240,7 +287,7 @@ class RunAgentPipelineUseCase:
                     task_label=f"products checklist ({room_id})"
                 )
                 product_answers = await self.agents_service.evaluate_checklist(
-                    product_checklist_input, self.cost_manager
+                    product_checklist_input, self.cost_manager, self.execution_tracker
                 )
                 total_product_items = len(product_answers.booleans) + len(product_answers.categoricals) + len(product_answers.conditionals)
                 logger.info(f"🛒 [REQ-{request_id}] Agent 5 Result: Room '{room_id}' products evaluated ({total_product_items} items)")
@@ -270,7 +317,7 @@ class RunAgentPipelineUseCase:
                 product_issues=summary["products"]
             )
             pros_cons = await self.agents_service.analyze_pros_cons(
-                pros_cons_input, self.cost_manager
+                pros_cons_input, self.cost_manager, self.execution_tracker
             )
             logger.info(f"🔍 [REQ-{request_id}] Agent 6 Result: {len(pros_cons.pros)} pros, {len(pros_cons.cons)} cons generated")
             
