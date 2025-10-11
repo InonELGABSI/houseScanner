@@ -1,0 +1,141 @@
+2025-09-15 15:34:52,071 - __main__ - INFO - [<module>:31] - Flask application initialized
+2025-09-15 15:37:12,712 - __main__ - INFO - [inspect:232] - 📥 [REQ-4350174128] New inspect request received
+2025-09-15 15:37:13,451 - __main__ - INFO - [inspect:246] - 📊 [REQ-4350174128] Request details: 9 total images, 2 rooms
+2025-09-15 15:37:13,451 - __main__ - INFO - [_run_full_flow:41] - === Starting Full House Inspection Flow ===
+2025-09-15 15:37:13,451 - __main__ - INFO - [_run_full_flow:42] - Total images: 9, Rooms: ['room1', 'room2']
+2025-09-15 15:37:13,451 - __main__ - INFO - [_run_full_flow:65] - 🏠 AGENT 1: Starting house type classification
+2025-09-15 15:37:13,451 - agents - INFO - [agent_types_from_images:95] - 🤖 Starting house type classification
+2025-09-15 15:37:13,451 - agents - DEBUG - [agent_types_from_images:96] - Input: 4 images, allowed types: ['apartment', 'villa', 'townhouse', 'studio', 'penthouse']
+2025-09-15 15:37:14,931 - agents - DEBUG - [agent_types_from_images:104] - Classification images prepared: 4 (combined data URL chars ~117184)
+2025-09-15 15:37:14,931 - agents - DEBUG - [agent_types_from_images:112] - Sending request to gpt-4o-mini with 4 images
+2025-09-15 15:37:17,410 - agents - INFO - [on_llm_end:70] - [TOKENS] house type: prompt=34111 completion=7 total=34118 cost=$0.0051 (agg_tokens=34118 agg_cost=$0.0051)
+2025-09-15 15:37:17,412 - agents - INFO - [agent_types_from_images:124] - ✅ house type classification complete in 3.96s
+2025-09-15 15:37:17,413 - agents - INFO - [agent_types_from_images:125] - Raw output: ['apartment'] -> Filtered: ['apartment']
+2025-09-15 15:37:17,413 - __main__ - INFO - [_run_full_flow:72] - ✅ AGENT 1 Complete: Detected house types: ['apartment']
+2025-09-15 15:37:17,413 - __main__ - INFO - [_run_full_flow:75] - 🏠 AGENT 2: Starting house checklist evaluation
+2025-09-15 15:37:17,413 - agents - INFO - [agent_fill_checklist:163] - 🤖 Starting checklist evaluation: house checklist
+2025-09-15 15:37:17,413 - agents - DEBUG - [agent_fill_checklist:164] - Input: 4 raw images, 13 checklist items (batch size=6)
+2025-09-15 15:37:17,413 - agents - DEBUG - [agent_fill_checklist:170] - Checklist composition: {'boolean': 8, 'categorical': 3, 'conditional': 2}
+2025-09-15 15:37:18,654 - agents - DEBUG - [agent_fill_checklist:176] - Checklist images prepared: 4 (combined data URL chars ~277416)
+2025-09-15 15:37:18,680 - agents - DEBUG - [agent_fill_checklist:194] - Batch 1: invoking model (JSON mode) on items ['water_damage', 'overall_cleanliness', 'structural_issues', 'electrical_system', 'plumbing_system', 'pest_issues']
+2025-09-15 15:37:21,785 - agents - INFO - [on_llm_end:70] - [TOKENS] house checklist/b1: prompt=11520 completion=79 total=11599 cost=$0.0018 (agg_tokens=45717 agg_cost=$0.0069)
+2025-09-15 15:37:21,836 - agents - DEBUG - [agent_fill_checklist:194] - Batch 2: invoking model (JSON mode) on items ['balcony', 'elevator_access', 'parking', 'visible_mold', 'paint_condition', 'roof_visibility']
+2025-09-15 15:37:27,104 - agents - INFO - [on_llm_end:70] - [TOKENS] house checklist/b2: prompt=11559 completion=114 total=11673 cost=$0.0018 (agg_tokens=57390 agg_cost=$0.0087)
+2025-09-15 15:37:27,157 - agents - DEBUG - [agent_fill_checklist:194] - Batch 3: invoking model (JSON mode) on items ['exterior_walls']
+2025-09-15 15:37:30,585 - agents - INFO - [on_llm_end:70] - [TOKENS] house checklist/b3: prompt=11490 completion=49 total=11539 cost=$0.0018 (agg_tokens=68929 agg_cost=$0.0105)
+2025-09-15 15:37:30,588 - agents - INFO - [agent_fill_checklist:258] - ✅ Checklist evaluation complete in 13.17s: house checklist (batches=3)
+2025-09-15 15:37:30,588 - agents - DEBUG - [agent_fill_checklist:259] - Response summary: 9 booleans, 3 categoricals, 2 conditionals
+2025-09-15 15:37:30,588 - agents - DEBUG - [agent_fill_checklist:262] - Sample boolean results: {'water_damage': False, 'structural_issues': False, 'electrical_system': False}
+2025-09-15 15:37:30,589 - agents - DEBUG - [agent_fill_checklist:264] - Sample categorical results: {'overall_cleanliness': 'Good', 'paint_condition': 'N/A', 'exterior_walls': 'N/A'}
+2025-09-15 15:37:30,589 - __main__ - INFO - [_run_full_flow:85] - ✅ AGENT 2 Complete: House checklist evaluated (13 items)
+2025-09-15 15:37:30,589 - __main__ - INFO - [_run_full_flow:89] - 🏠 AGENTS 3-5: Starting per-room analysis
+2025-09-15 15:37:30,589 - __main__ - INFO - [_run_full_flow:96] - 📍 Processing room 1/2: 'room1' (3 images)
+2025-09-15 15:37:30,589 - __main__ - INFO - [_run_full_flow:99] - 🏠 AGENT 3: Room type classification for 'room1'
+2025-09-15 15:37:30,589 - agents - INFO - [agent_types_from_images:95] - 🤖 Starting room type classification
+2025-09-15 15:37:30,589 - agents - DEBUG - [agent_types_from_images:96] - Input: 3 images, allowed types: ['bedroom', 'living_room', 'kitchen', 'bathroom', 'office']
+2025-09-15 15:37:31,514 - agents - DEBUG - [agent_types_from_images:104] - Classification images prepared: 3 (combined data URL chars ~81349)
+2025-09-15 15:37:31,514 - agents - DEBUG - [agent_types_from_images:112] - Sending request to gpt-4o-mini with 3 images
+2025-09-15 15:37:33,556 - agents - INFO - [on_llm_end:70] - [TOKENS] room type: prompt=25612 completion=6 total=25618 cost=$0.0038 (agg_tokens=94547 agg_cost=$0.0143)
+2025-09-15 15:37:33,560 - agents - INFO - [agent_types_from_images:124] - ✅ room type classification complete in 2.97s
+2025-09-15 15:37:33,560 - agents - INFO - [agent_types_from_images:125] - Raw output: ['office'] -> Filtered: ['office']
+2025-09-15 15:37:33,560 - __main__ - INFO - [_run_full_flow:104] - ✅ AGENT 3 Complete: Room 'room1' types: ['office']
+2025-09-15 15:37:33,561 - __main__ - INFO - [_run_full_flow:107] - 🏠 AGENT 4: Room checklist evaluation for 'room1'
+2025-09-15 15:37:33,561 - agents - INFO - [agent_fill_checklist:163] - 🤖 Starting checklist evaluation: room checklist (room1)
+2025-09-15 15:37:33,561 - agents - DEBUG - [agent_fill_checklist:164] - Input: 3 raw images, 10 checklist items (batch size=6)
+2025-09-15 15:37:33,561 - agents - DEBUG - [agent_fill_checklist:170] - Checklist composition: {'categorical': 4, 'boolean': 3, 'conditional': 3}
+2025-09-15 15:37:34,492 - agents - DEBUG - [agent_fill_checklist:176] - Checklist images prepared: 3 (combined data URL chars ~187717)
+2025-09-15 15:37:34,518 - agents - DEBUG - [agent_fill_checklist:194] - Batch 1: invoking model (JSON mode) on items ['room_cleanliness', 'structural_issues', 'lighting', 'windows', 'flooring', 'desk']
+2025-09-15 15:37:38,267 - agents - INFO - [on_llm_end:70] - [TOKENS] room checklist (room1)/b1: prompt=8734 completion=135 total=8869 cost=$0.0014 (agg_tokens=103416 agg_cost=$0.0157)
+2025-09-15 15:37:38,320 - agents - DEBUG - [agent_fill_checklist:194] - Batch 2: invoking model (JSON mode) on items ['chair', 'shelves', 'visible_mold', 'paint_condition']
+2025-09-15 15:37:42,272 - agents - INFO - [on_llm_end:70] - [TOKENS] room checklist (room1)/b2: prompt=8705 completion=91 total=8796 cost=$0.0014 (agg_tokens=112212 agg_cost=$0.0170)
+2025-09-15 15:37:42,275 - agents - INFO - [agent_fill_checklist:258] - ✅ Checklist evaluation complete in 8.71s: room checklist (room1) (batches=2)
+2025-09-15 15:37:42,276 - agents - DEBUG - [agent_fill_checklist:259] - Response summary: 3 booleans, 4 categoricals, 3 conditionals
+2025-09-15 15:37:42,276 - agents - DEBUG - [agent_fill_checklist:262] - Sample boolean results: {'structural_issues': False, 'lighting': True, 'visible_mold': False}
+2025-09-15 15:37:42,276 - agents - DEBUG - [agent_fill_checklist:264] - Sample categorical results: {'room_cleanliness': 'Good', 'flooring': 'Average', 'shelves': 'Good'}
+2025-09-15 15:37:42,276 - __main__ - INFO - [_run_full_flow:115] - ✅ AGENT 4 Complete: Room 'room1' checklist evaluated (10 items)
+2025-09-15 15:37:42,277 - __main__ - INFO - [_run_full_flow:119] - 🏠 AGENT 5: Products checklist evaluation for 'room1'
+2025-09-15 15:37:42,277 - agents - INFO - [agent_fill_checklist:163] - 🤖 Starting checklist evaluation: products checklist (room1)
+2025-09-15 15:37:42,277 - agents - DEBUG - [agent_fill_checklist:164] - Input: 3 raw images, 27 checklist items (batch size=6)
+2025-09-15 15:37:42,277 - agents - DEBUG - [agent_fill_checklist:170] - Checklist composition: {'conditional': 25, 'categorical': 2}
+2025-09-15 15:37:43,220 - agents - DEBUG - [agent_fill_checklist:176] - Checklist images prepared: 3 (combined data URL chars ~187717)
+2025-09-15 15:37:43,246 - agents - DEBUG - [agent_fill_checklist:194] - Batch 1: invoking model (JSON mode) on items ['bed', 'mattress', 'sofa', 'armchair', 'dining_table', 'dining_chairs']
+2025-09-15 15:37:50,657 - agents - INFO - [on_llm_end:70] - [TOKENS] products checklist (room1)/b1: prompt=8865 completion=292 total=9157 cost=$0.0015 (agg_tokens=121369 agg_cost=$0.0186)
+2025-09-15 15:37:50,707 - agents - DEBUG - [agent_fill_checklist:194] - Batch 2: invoking model (JSON mode) on items ['desk', 'office_chair', 'bookshelf', 'wardrobe', 'nightstand', 'coffee_table']
+2025-09-15 15:38:00,180 - agents - INFO - [on_llm_end:70] - [TOKENS] products checklist (room1)/b2: prompt=8889 completion=360 total=9249 cost=$0.0015 (agg_tokens=130618 agg_cost=$0.0201)
+2025-09-15 15:38:00,231 - agents - DEBUG - [agent_fill_checklist:194] - Batch 3: invoking model (JSON mode) on items ['tv_unit', 'fridge', 'stove', 'oven', 'microwave', 'washing_machine']
+2025-09-15 15:38:08,882 - agents - INFO - [on_llm_end:70] - [TOKENS] products checklist (room1)/b3: prompt=8920 completion=280 total=9200 cost=$0.0015 (agg_tokens=139818 agg_cost=$0.0216)
+2025-09-15 15:38:08,924 - agents - DEBUG - [agent_fill_checklist:194] - Batch 4: invoking model (JSON mode) on items ['dryer', 'dishwasher', 'water_heater', 'air_conditioner', 'heater', 'ceiling_fan']
+2025-09-15 15:38:15,334 - agents - INFO - [on_llm_end:70] - [TOKENS] products checklist (room1)/b4: prompt=8894 completion=312 total=9206 cost=$0.0015 (agg_tokens=149024 agg_cost=$0.0231)
+2025-09-15 15:38:15,382 - agents - DEBUG - [agent_fill_checklist:194] - Batch 5: invoking model (JSON mode) on items ['lamp', 'fridge__door_condition', 'sofa__upholstery_condition']
+2025-09-15 15:38:18,270 - agents - INFO - [on_llm_end:70] - [TOKENS] products checklist (room1)/b5: prompt=8722 completion=110 total=8832 cost=$0.0014 (agg_tokens=157856 agg_cost=$0.0245)
+2025-09-15 15:38:18,271 - agents - INFO - [agent_fill_checklist:258] - ✅ Checklist evaluation complete in 35.99s: products checklist (room1) (batches=5)
+2025-09-15 15:38:18,271 - agents - DEBUG - [agent_fill_checklist:259] - Response summary: 27 booleans, 26 categoricals, 25 conditionals
+2025-09-15 15:38:18,272 - agents - DEBUG - [agent_fill_checklist:262] - Sample boolean results: {'bed': False, 'mattress': False, 'sofa': False}
+2025-09-15 15:38:18,272 - agents - DEBUG - [agent_fill_checklist:264] - Sample categorical results: {'bed': 'N/A', 'mattress': 'N/A', 'sofa': 'N/A'}
+2025-09-15 15:38:18,272 - __main__ - INFO - [_run_full_flow:127] - ✅ AGENT 5 Complete: Room 'room1' products evaluated (27 items)
+2025-09-15 15:38:18,272 - __main__ - INFO - [_run_full_flow:96] - 📍 Processing room 2/2: 'room2' (6 images)
+2025-09-15 15:38:18,272 - __main__ - INFO - [_run_full_flow:99] - 🏠 AGENT 3: Room type classification for 'room2'
+2025-09-15 15:38:18,272 - agents - INFO - [agent_types_from_images:95] - 🤖 Starting room type classification
+2025-09-15 15:38:18,273 - agents - DEBUG - [agent_types_from_images:96] - Input: 4 images, allowed types: ['bedroom', 'living_room', 'kitchen', 'bathroom', 'office']
+2025-09-15 15:38:19,529 - agents - DEBUG - [agent_types_from_images:104] - Classification images prepared: 4 (combined data URL chars ~127204)
+2025-09-15 15:38:19,529 - agents - DEBUG - [agent_types_from_images:112] - Sending request to gpt-4o-mini with 4 images
+2025-09-15 15:38:23,120 - agents - INFO - [on_llm_end:70] - [TOKENS] room type: prompt=34112 completion=10 total=34122 cost=$0.0051 (agg_tokens=191978 agg_cost=$0.0296)
+2025-09-15 15:38:23,124 - agents - INFO - [agent_types_from_images:124] - ✅ room type classification complete in 4.85s
+2025-09-15 15:38:23,125 - agents - INFO - [agent_types_from_images:125] - Raw output: ['living_room', 'kitchen'] -> Filtered: ['living_room', 'kitchen']
+2025-09-15 15:38:23,125 - __main__ - INFO - [_run_full_flow:104] - ✅ AGENT 3 Complete: Room 'room2' types: ['living_room', 'kitchen']
+2025-09-15 15:38:23,125 - __main__ - INFO - [_run_full_flow:107] - 🏠 AGENT 4: Room checklist evaluation for 'room2'
+2025-09-15 15:38:23,125 - __main__ - WARNING - [_maybe_token_pace:61] - Token pace reached 191978 (>= 160000); sleeping 8.0s before agent4
+2025-09-15 15:38:31,128 - agents - INFO - [agent_fill_checklist:163] - 🤖 Starting checklist evaluation: room checklist (room2)
+2025-09-15 15:38:31,130 - agents - DEBUG - [agent_fill_checklist:164] - Input: 4 raw images, 13 checklist items (batch size=6)
+2025-09-15 15:38:31,130 - agents - DEBUG - [agent_fill_checklist:170] - Checklist composition: {'categorical': 5, 'boolean': 4, 'conditional': 4}
+2025-09-15 15:38:32,412 - agents - DEBUG - [agent_fill_checklist:176] - Checklist images prepared: 4 (combined data URL chars ~299808)
+2025-09-15 15:38:32,439 - agents - DEBUG - [agent_fill_checklist:194] - Batch 1: invoking model (JSON mode) on items ['room_cleanliness', 'structural_issues', 'lighting', 'windows', 'flooring', 'sofa']
+2025-09-15 15:38:37,561 - agents - INFO - [on_llm_end:70] - [TOKENS] room checklist (room2)/b1: prompt=11568 completion=135 total=11703 cost=$0.0018 (agg_tokens=203681 agg_cost=$0.0314)
+2025-09-15 15:38:37,613 - agents - DEBUG - [agent_fill_checklist:194] - Batch 2: invoking model (JSON mode) on items ['tv', 'balcony_access', 'kitchen_appliances', 'sink', 'cabinets', 'visible_mold']
+2025-09-15 15:38:59,063 - agents - INFO - [on_llm_end:70] - [TOKENS] room checklist (room2)/b2: prompt=11569 completion=128 total=11697 cost=$0.0018 (agg_tokens=215378 agg_cost=$0.0333)
+2025-09-15 15:38:59,115 - agents - DEBUG - [agent_fill_checklist:194] - Batch 3: invoking model (JSON mode) on items ['paint_condition']
+2025-09-15 15:39:03,570 - agents - INFO - [on_llm_end:70] - [TOKENS] room checklist (room2)/b3: prompt=11492 completion=45 total=11537 cost=$0.0018 (agg_tokens=226915 agg_cost=$0.0350)
+2025-09-15 15:39:03,574 - agents - INFO - [agent_fill_checklist:258] - ✅ Checklist evaluation complete in 32.45s: room checklist (room2) (batches=3)
+2025-09-15 15:39:03,574 - agents - DEBUG - [agent_fill_checklist:259] - Response summary: 5 booleans, 5 categoricals, 4 conditionals
+2025-09-15 15:39:03,574 - agents - DEBUG - [agent_fill_checklist:262] - Sample boolean results: {'structural_issues': False, 'lighting': True, 'sink': True}
+2025-09-15 15:39:03,574 - agents - DEBUG - [agent_fill_checklist:264] - Sample categorical results: {'room_cleanliness': 'Average', 'flooring': 'Good', 'kitchen_appliances': 'Good'}
+2025-09-15 15:39:03,575 - __main__ - INFO - [_run_full_flow:115] - ✅ AGENT 4 Complete: Room 'room2' checklist evaluated (13 items)
+2025-09-15 15:39:03,575 - __main__ - INFO - [_run_full_flow:119] - 🏠 AGENT 5: Products checklist evaluation for 'room2'
+2025-09-15 15:39:03,575 - __main__ - WARNING - [_maybe_token_pace:61] - Token pace reached 226915 (>= 160000); sleeping 8.0s before agent5
+2025-09-15 15:39:11,578 - agents - INFO - [agent_fill_checklist:163] - 🤖 Starting checklist evaluation: products checklist (room2)
+2025-09-15 15:39:11,579 - agents - DEBUG - [agent_fill_checklist:164] - Input: 4 raw images, 27 checklist items (batch size=6)
+2025-09-15 15:39:11,580 - agents - DEBUG - [agent_fill_checklist:170] - Checklist composition: {'conditional': 25, 'categorical': 2}
+2025-09-15 15:39:12,879 - agents - DEBUG - [agent_fill_checklist:176] - Checklist images prepared: 4 (combined data URL chars ~299808)
+2025-09-15 15:39:12,905 - agents - DEBUG - [agent_fill_checklist:194] - Batch 1: invoking model (JSON mode) on items ['bed', 'mattress', 'sofa', 'armchair', 'dining_table', 'dining_chairs']
+2025-09-15 15:39:20,669 - agents - INFO - [on_llm_end:70] - [TOKENS] products checklist (room2)/b1: prompt=11698 completion=332 total=12030 cost=$0.0020 (agg_tokens=238945 agg_cost=$0.0370)
+2025-09-15 15:39:20,717 - agents - DEBUG - [agent_fill_checklist:194] - Batch 2: invoking model (JSON mode) on items ['desk', 'office_chair', 'bookshelf', 'wardrobe', 'nightstand', 'coffee_table']
+2025-09-15 15:39:28,220 - agents - INFO - [on_llm_end:70] - [TOKENS] products checklist (room2)/b2: prompt=11722 completion=283 total=12005 cost=$0.0019 (agg_tokens=250950 agg_cost=$0.0389)
+2025-09-15 15:39:28,272 - agents - DEBUG - [agent_fill_checklist:194] - Batch 3: invoking model (JSON mode) on items ['tv_unit', 'fridge', 'stove', 'oven', 'microwave', 'washing_machine']
+2025-09-15 15:39:34,743 - agents - INFO - [on_llm_end:70] - [TOKENS] products checklist (room2)/b3: prompt=11753 completion=310 total=12063 cost=$0.0019 (agg_tokens=263013 agg_cost=$0.0408)
+2025-09-15 15:39:34,792 - agents - DEBUG - [agent_fill_checklist:194] - Batch 4: invoking model (JSON mode) on items ['dryer', 'dishwasher', 'water_heater', 'air_conditioner', 'heater', 'ceiling_fan']
+2025-09-15 15:39:40,184 - agents - INFO - [on_llm_end:70] - [TOKENS] products checklist (room2)/b4: prompt=11727 completion=310 total=12037 cost=$0.0019 (agg_tokens=275050 agg_cost=$0.0428)
+2025-09-15 15:39:40,236 - agents - DEBUG - [agent_fill_checklist:194] - Batch 5: invoking model (JSON mode) on items ['lamp', 'fridge__door_condition', 'sofa__upholstery_condition']
+2025-09-15 15:39:44,225 - agents - INFO - [on_llm_end:70] - [TOKENS] products checklist (room2)/b5: prompt=11555 completion=110 total=11665 cost=$0.0018 (agg_tokens=286715 agg_cost=$0.0446)
+2025-09-15 15:39:44,226 - agents - INFO - [agent_fill_checklist:258] - ✅ Checklist evaluation complete in 32.65s: products checklist (room2) (batches=5)
+2025-09-15 15:39:44,227 - agents - DEBUG - [agent_fill_checklist:259] - Response summary: 27 booleans, 26 categoricals, 25 conditionals
+2025-09-15 15:39:44,227 - agents - DEBUG - [agent_fill_checklist:262] - Sample boolean results: {'bed': False, 'mattress': False, 'sofa': True}
+2025-09-15 15:39:44,227 - agents - DEBUG - [agent_fill_checklist:264] - Sample categorical results: {'bed': 'N/A', 'mattress': 'N/A', 'sofa': 'N/A'}
+2025-09-15 15:39:44,228 - __main__ - INFO - [_run_full_flow:127] - ✅ AGENT 5 Complete: Room 'room2' products evaluated (27 items)
+2025-09-15 15:39:44,228 - __main__ - INFO - [_run_full_flow:144] - ✅ Per-room analysis complete
+2025-09-15 15:39:44,228 - __main__ - INFO - [_run_full_flow:157] - 📊 Issues summary: 1 house, 8 room, 6 product
+2025-09-15 15:39:44,228 - __main__ - INFO - [_run_full_flow:160] - 🏠 AGENT 6: Starting pros/cons analysis
+2025-09-15 15:39:44,228 - __main__ - WARNING - [_maybe_token_pace:61] - Token pace reached 286715 (>= 160000); sleeping 8.0s before agent6
+2025-09-15 15:39:52,234 - agents - INFO - [agent_pros_cons:282] - 🤖 Starting pros/cons analysis
+2025-09-15 15:39:52,234 - agents - DEBUG - [agent_pros_cons:283] - Input: 1 house issues, 8 room issues, 6 product issues
+2025-09-15 15:39:52,289 - agents - DEBUG - [agent_pros_cons:297] - Sending pros/cons request to gpt-4o-mini
+2025-09-15 15:39:52,289 - agents - DEBUG - [agent_pros_cons:298] - Input text length: 775 characters
+2025-09-15 15:39:54,566 - agents - INFO - [on_llm_end:70] - [TOKENS] pros_cons: prompt=248 completion=95 total=343 cost=$0.0001 (agg_tokens=287058 agg_cost=$0.0447)
+2025-09-15 15:39:54,569 - agents - INFO - [agent_pros_cons:303] - ✅ Pros/cons analysis complete in 2.34s
+2025-09-15 15:39:54,570 - agents - INFO - [agent_pros_cons:304] - Generated 2 pros and 3 cons
+2025-09-15 15:39:54,570 - agents - DEBUG - [agent_pros_cons:308] - Sample pros: ['House has no elevator access, which may be beneficial for fitness enthusiasts or those who prefer a more active lifestyle.', 'Rooms have average cleanliness and condition, indicating a generally acceptable living environment.']
+2025-09-15 15:39:54,570 - agents - DEBUG - [agent_pros_cons:310] - Sample cons: ['Lack of elevator access may be inconvenient for residents with mobility issues or heavy items to carry.', 'Room 1 has poor chair condition, which could affect comfort and productivity.']
+2025-09-15 15:39:54,570 - __main__ - INFO - [_run_full_flow:164] - ✅ AGENT 6 Complete: Generated 2 pros, 3 cons
+2025-09-15 15:39:54,570 - __main__ - INFO - [_run_full_flow:199] - 🧾 CLIENT SUMMARY COUNTS: house(true=0, cat=3) | rooms(true=3, cat=9) | products(true=9, cat=52) | pros=2 cons=3
+2025-09-15 15:39:54,570 - __main__ - INFO - [_run_full_flow:207] - === Full House Inspection Flow Complete ===
+2025-09-15 15:39:54,570 - __main__ - INFO - [_run_full_flow:208] - Token usage summary: TOTAL prompt=283465 completion=3593 total=287058 cost=$0.0408 |  - house checklist/b1: p=11520 c=79 t=11599 cost=$0.0018 |  - house checklist/b2: p=11559 c=114 t=11673 cost=$0.0018 |  - house checklist/b3: p=11490 c=49 t=11539 cost=$0.0018 |  - house type: p=34111 c=7 t=34118 cost=$0.0051 |  - products checklist (room1)/b1: p=8865 c=292 t=9157 cost=$0.0015 |  - products checklist (room1)/b2: p=8889 c=360 t=9249 cost=$0.0015 |  - products checklist (room1)/b3: p=8920 c=280 t=9200 cost=$0.0015 |  - products checklist (room1)/b4: p=8894 c=312 t=9206 cost=$0.0015 |  - products checklist (room1)/b5: p=8722 c=110 t=8832 cost=$0.0014 |  - products checklist (room2)/b1: p=11698 c=332 t=12030 cost=$0.0020 |  - products checklist (room2)/b2: p=11722 c=283 t=12005 cost=$0.0019 |  - products checklist (room2)/b3: p=11753 c=310 t=12063 cost=$0.0019 |  - products checklist (room2)/b4: p=11727 c=310 t=12037 cost=$0.0019 |  - products checklist (room2)/b5: p=11555 c=110 t=11665 cost=$0.0018 |  - pros_cons: p=248 c=95 t=343 cost=$0.0001 |  - room checklist (room1)/b1: p=8734 c=135 t=8869 cost=$0.0014 |  - room checklist (room1)/b2: p=8705 c=91 t=8796 cost=$0.0014 |  - room checklist (room2)/b1: p=11568 c=135 t=11703 cost=$0.0018 |  - room checklist (room2)/b2: p=11569 c=128 t=11697 cost=$0.0018 |  - room checklist (room2)/b3: p=11492 c=45 t=11537 cost=$0.0018 |  - room type: p=34112 c=10 t=34122 cost=$0.0051
+2025-09-15 15:39:54,570 - __main__ - INFO - [inspect:254] - ✅ [REQ-4350174128] Inspect request completed successfully

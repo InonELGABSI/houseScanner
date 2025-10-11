@@ -1,0 +1,6 @@
+2025-09-14 02:23:25,249 - __main__ - INFO - [<module>:31] - Flask application initialized
+2025-09-14 03:03:11,689 - __main__ - INFO - [inspect:232] - 📥 [REQ-4352549616] New inspect request received
+2025-09-14 03:03:11,690 - __main__ - INFO - [inspect:246] - 📊 [REQ-4352549616] Request details: 0 total images, 0 rooms
+2025-09-14 03:03:11,691 - __main__ - WARNING - [inspect:249] - ❌ [REQ-4352549616] No images provided
+2025-09-14 03:03:11,691 - __main__ - ERROR - [inspect:258] - ❌ [REQ-4352549616] Inspect request failed: 400 Bad Request: No images provided
+2025-09-14 03:03:11,691 - app - ERROR - [inspect:259] - Error in inspect endpoint: 400 Bad Request: No images provided

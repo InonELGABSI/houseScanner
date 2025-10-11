@@ -1,0 +1,80 @@
+/* Mobile-first PWA styles */
+#root {
+  width: 100%;
+  min-height: 100vh;
+  margin: 0;
+  padding: 0;
+  overflow-x: hidden;
+}
+
+/* Custom animations */
+@keyframes slide-up {
+  from {
+    opacity: 0;
+    transform: translateY(20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.animate-slide-up {
+  animation: slide-up 0.3s ease-out;
+}
+
+/* Glow effects for better mobile visibility */
+.shadow-glow-lg {
+  box-shadow: 0 0 0 1px rgba(16, 185, 129, 0.1),
+              0 10px 15px -3px rgba(16, 185, 129, 0.1),
+              0 4px 6px -2px rgba(16, 185, 129, 0.05);
+}
+
+/* Text truncation utilities */
+.line-clamp-3 {
+  display: -webkit-box;
+  -webkit-line-clamp: 3;
+  line-clamp: 3;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+/* Touch-friendly buttons */
+button, 
+[role="button"] {
+  min-height: 44px; /* iOS recommended minimum touch target */
+  touch-action: manipulation;
+}
+
+/* Prevent zoom on inputs in iOS */
+input[type="text"],
+input[type="email"],
+input[type="password"],
+input[type="number"],
+textarea {
+  font-size: 16px; /* Prevents zoom on iOS */
+}
+
+/* Better focus visibility for accessibility */
+button:focus-visible,
+input:focus-visible,
+a:focus-visible {
+  outline: 2px solid #10b981;
+  outline-offset: 2px;
+}
+
+/* Smooth scrolling */
+html {
+  scroll-behavior: smooth;
+}
+
+/* Safe area padding for devices with notches */
+@supports (padding: max(0px)) {
+  .safe-area-top {
+    padding-top: max(1rem, env(safe-area-inset-top));
+  }
+  
+  .safe-area-bottom {
+    padding-bottom: max(1rem, env(safe-area-inset-bottom));
+  }
+}
