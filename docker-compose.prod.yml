@@ -19,6 +19,7 @@ services:
 
   # Agents Service - Production
   agents-service:
+    image: ${DOCKERHUB_USERNAME:-your_dockerhub_username}/housescanner-agents:${IMAGE_TAG:-latest}
     build:
       context: ./agents-service
       dockerfile: Dockerfile.prod
@@ -46,6 +47,7 @@ services:
 
   # Backend - Production
   backend:
+    image: ${DOCKERHUB_USERNAME:-your_dockerhub_username}/housescanner-backend:${IMAGE_TAG:-latest}
     build:
       context: ./backend
       dockerfile: Dockerfile.prod
@@ -73,6 +75,7 @@ services:
 
   # Client PWA - Production
   client:
+    image: ${DOCKERHUB_USERNAME:-your_dockerhub_username}/housescanner-client:${IMAGE_TAG:-latest}
     build:
       context: ./client-pwa
       dockerfile: Dockerfile.prod

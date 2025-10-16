@@ -81,7 +81,7 @@ services:
     volumes:
       - ./backend:/app
       - /app/node_modules
-      - /app/dist
+      # - /app/dist  # Commented out to avoid EBUSY errors
     env_file:
       - ./backend/.env
     depends_on:

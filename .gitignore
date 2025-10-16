@@ -1,0 +1,101 @@
+# Global ignores for sensitive and build artifacts
+
+# Python
+__pycache__/
+*.py[cod]
+*.pyo
+*.pyd
+*.so
+.venv/
+venv/
+.env
+.env.*
+!.env.example
+*.env.local
+*.env.development*
+*.env.production*
+
+# Node/TypeScript
+node_modules/
+dist/
+.build/
+coverage/
+.npmrc
+
+# Vite/React
+client-pwa/dev-dist/
+client-pwa/dist/
+
+# Logs and dumps
+*.log
+logs/
+*.sqlite
+*.db
+*.sql
+*.dump
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Docker
+*.pid
+*.seed
+.docker/
+.dockerignore.local
+
+# Ansible and secrets
+ansible/group_vars/secrets.yaml
+ansible/group_vars/secrets.yml
+ansible/group_vars/*secrets*.yml
+ansible/group_vars/*secrets*.yaml
+ansible/.vault_pass
+ansible/**/.vault_pass
+infrastructure_outputs.txt
+ansible/infrastructure_outputs.txt
+
+# Keys & credentials
+**/id_rsa
+**/id_rsa.pub
+**/*.pem
+**/*.key
+**/*.crt
+**/*.p12
+**/*.pfx
+**/ssh_config
+
+# Prisma
+backend/prisma/*.db
+backend/prisma/*.sqlite
+backend/prisma/*.db-journal
+backend/prisma/.env
+
+# Build caches
+**/.cache/
+**/.pytest_cache/
+**/.mypy_cache/
+**/.ruff_cache/
+**/.tox/
+**/.coverage
+
+# IDE/editor
+.vscode/
+.idea/
+*.iml
+*.swp
+
+# Misc
+/tmp/
+**/tmp/
+
+# Ignore prod env files in services
+agents-service/.env
+agents-service/.env.*
+backend/.env
+backend/.env.*
+client-pwa/.env
+client-pwa/.env.*
+!.env.example
+agents-service/.env.prod
+backend/.env.prod
+client-pwa/.env.prod

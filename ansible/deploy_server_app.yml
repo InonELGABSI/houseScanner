@@ -1,0 +1,446 @@
+---
+- name: Provision HouseScanner Infrastructure (EC2, RDS, S3)
+  hosts: localhost
+  connection: local
+  gather_facts: False
+  vars_files:
+    - group_vars/env.yaml
+    - group_vars/secrets.yaml  # Contains sensitive data (create with ansible-vault)
+  vars:
+    ansible_python_interpreter: /usr/bin/python3
+
+  tasks:
+    - name: Create VPC
+      amazon.aws.ec2_vpc_net:
+        name: "{{ vpc_name }}"
+        cidr_block: "{{ network }}"
+        region: "{{ zone }}"
+        state: present
+        dns_hostnames: yes
+        dns_support: yes
+        tags:
+          Name: "{{ vpc_name }}"
+          Environment: "{{ env }}"
+      register: vpc
+
+    - name: Create Public Subnet 1
+      amazon.aws.ec2_vpc_subnet:
+        vpc_id: "{{ vpc.vpc.id }}"
+        cidr: "{{ subnet_public_1 }}"
+        region: "{{ zone }}"
+        az: "{{ subnet_az_1 }}"
+        map_public: yes
+        state: present
+        tags:
+          Name: "{{ vpc_name }}-public-1"
+          Environment: "{{ env }}"
+        wait: yes
+      register: subnet_public_1
+
+    - name: Create Public Subnet 2
+      amazon.aws.ec2_vpc_subnet:
+        vpc_id: "{{ vpc.vpc.id }}"
+        cidr: "{{ subnet_public_2 }}"
+        region: "{{ zone }}"
+        az: "{{ subnet_az_2 }}"
+        map_public: yes
+        state: present
+        tags:
+          Name: "{{ vpc_name }}-public-2"
+          Environment: "{{ env }}"
+        wait: yes
+      register: subnet_public_2
+
+    - name: Create Private Subnet 1 (for RDS)
+      amazon.aws.ec2_vpc_subnet:
+        vpc_id: "{{ vpc.vpc.id }}"
+        cidr: "{{ subnet_private_1 }}"
+        region: "{{ zone }}"
+        az: "{{ subnet_az_1 }}"
+        map_public: no
+        state: present
+        tags:
+          Name: "{{ vpc_name }}-private-1"
+          Environment: "{{ env }}"
+        wait: yes
+      register: subnet_private_1
+
+    - name: Create Private Subnet 2 (for RDS)
+      amazon.aws.ec2_vpc_subnet:
+        vpc_id: "{{ vpc.vpc.id }}"
+        cidr: "{{ subnet_private_2 }}"
+        region: "{{ zone }}"
+        az: "{{ subnet_az_2 }}"
+        map_public: no
+        state: present
+        tags:
+          Name: "{{ vpc_name }}-private-2"
+          Environment: "{{ env }}"
+        wait: yes
+      register: subnet_private_2
+
+    - name: Create Internet Gateway
+      amazon.aws.ec2_vpc_igw:
+        vpc_id: "{{ vpc.vpc.id }}"
+        region: "{{ zone }}"
+        state: present
+        tags:
+          Name: "{{ vpc_name }}-igw"
+      register: igw
+
+    - name: Create Route Table
+      amazon.aws.ec2_vpc_route_table:
+        vpc_id: "{{ vpc.vpc.id }}"
+        region: "{{ zone }}"
+        state: present
+        subnets:
+          - "{{ subnet.subnet.id }}"
+        routes:
+          - dest: 0.0.0.0/0
+            gateway_id: "{{ igw.gateway_id }}"
+        tags:
+          Name: "{{ vpc_name }}-public-rt"
+
+    - name: Create EC2 Security Group
+      amazon.aws.ec2_group:
+        name: "{{ vpc_name }}-ec2-sg"
+        description: "Security group for HouseScanner EC2 instance"
+        vpc_id: "{{ vpc.vpc.id }}"
+        region: "{{ zone }}"
+        state: present
+        rules:
+          - proto: tcp
+            ports: 22
+            cidr_ip: 0.0.0.0/0
+            rule_desc: "SSH access"
+          - proto: tcp
+            ports: 80
+            cidr_ip: 0.0.0.0/0
+            rule_desc: "HTTP access"
+          - proto: tcp
+            ports: 443
+            cidr_ip: 0.0.0.0/0
+            rule_desc: "HTTPS access"
+          - proto: tcp
+            ports: "{{ backend_port }}"
+            cidr_ip: 0.0.0.0/0
+            rule_desc: "Backend API"
+          - proto: tcp
+            ports: "{{ agents_service_port }}"
+            cidr_ip: 0.0.0.0/0
+            rule_desc: "Agents Service"
+          - proto: tcp
+            ports: "{{ client_port }}"
+            cidr_ip: 0.0.0.0/0
+            rule_desc: "Client PWA"
+        tags:
+          Name: "{{ vpc_name }}-ec2-sg"
+          Environment: "{{ env }}"
+      register: ec2_sg
+
+    - name: Create RDS Security Group
+      amazon.aws.ec2_group:
+        name: "{{ vpc_name }}-rds-sg"
+        description: "Security group for RDS PostgreSQL"
+        vpc_id: "{{ vpc.vpc.id }}"
+        region: "{{ zone }}"
+        state: present
+        rules:
+          - proto: tcp
+            ports: 5432
+            group_id: "{{ ec2_sg.group_id }}"
+            rule_desc: "PostgreSQL from EC2"
+        tags:
+          Name: "{{ vpc_name }}-rds-sg"
+          Environment: "{{ env }}"
+      register: rds_sg
+
+    - name: Create S3 Bucket for Images
+      amazon.aws.s3_bucket:
+        name: "{{ s3_bucket_name }}"
+        region: "{{ s3_region }}"
+        state: present
+        versioning: yes
+        encryption: "AES256"
+        public_access:
+          block_public_acls: false
+          block_public_policy: false
+          ignore_public_acls: false
+          restrict_public_buckets: false
+        tags:
+          Name: "{{ s3_bucket_name }}"
+          Environment: "{{ env }}"
+      register: s3_bucket
+
+    - name: Set S3 Bucket CORS Policy
+      amazon.aws.s3_cors:
+        name: "{{ s3_bucket_name }}"
+        region: "{{ s3_region }}"
+        rules:
+          - allowed_origins: ['*']
+            allowed_methods: ['GET', 'PUT', 'POST', 'DELETE']
+            allowed_headers: ['*']
+            max_age_seconds: 3000
+
+    - name: Create RDS DB Subnet Group
+      amazon.aws.rds_subnet_group:
+        name: "{{ db_instance_identifier }}-subnet-group"
+        description: "Subnet group for HouseScanner RDS"
+        region: "{{ zone }}"
+        subnets:
+          - "{{ subnet_private_1.subnet.id }}"
+          - "{{ subnet_private_2.subnet.id }}"
+        state: present
+        tags:
+          Name: "{{ db_instance_identifier }}-subnet-group"
+          Environment: "{{ env }}"
+      register: db_subnet_group
+
+    - name: Create RDS PostgreSQL Instance
+      amazon.aws.rds_instance:
+        id: "{{ db_instance_identifier }}"
+        region: "{{ zone }}"
+        engine: "{{ db_engine }}"
+        engine_version: "{{ db_engine_version }}"
+        db_instance_class: "{{ db_instance_class }}"
+        allocated_storage: "{{ db_allocated_storage }}"
+        db_name: "{{ db_name }}"
+        master_username: "{{ db_username }}"
+        master_user_password: "{{ db_password }}"
+        vpc_security_group_ids:
+          - "{{ rds_sg.group_id }}"
+        db_subnet_group_name: "{{ db_subnet_group.subnet_group.name }}"
+        publicly_accessible: "{{ db_publicly_accessible }}"
+        multi_az: "{{ db_multi_az }}"
+        backup_retention_period: "{{ db_backup_retention }}"
+        skip_final_snapshot: "{{ db_skip_final_snapshot }}"
+        storage_encrypted: yes
+        tags:
+          Name: "{{ db_instance_identifier }}"
+          Environment: "{{ env }}"
+        state: present
+        wait: yes
+      register: rds_instance
+
+    - name: Launch EC2 instance
+      amazon.aws.ec2_instance:
+        name: "{{ server_name }}"
+        key_name: "{{ keypair }}"
+        image_id: "{{ aws_ubuntu_ami }}"
+        instance_type: "{{ server_type }}"
+        region: "{{ zone }}"
+        vpc_subnet_id: "{{ subnet_public_1.subnet.id }}"
+        security_group: "{{ ec2_sg.group_id }}"
+        wait: yes
+        network:
+          assign_public_ip: yes
+        volumes:
+          - device_name: /dev/sda1
+            ebs:
+              volume_size: "{{ server_volume_size }}"
+              volume_type: gp3
+              delete_on_termination: true
+        user_data: |
+          #!/bin/bash
+          apt-get update
+          apt-get install -y python3 python3-pip
+        tags:
+          Name: "{{ server_name }}"
+          Environment: "{{ env }}"
+        state: running
+        wait_timeout: 500
+      register: ec2_data
+
+    - name: Save infrastructure outputs to file
+      copy:
+        content: |
+          # HouseScanner Infrastructure Outputs - Dynamic Values Only
+          # Generated on {{ ansible_date_time.iso8601 }}
+          
+          # EC2 Instance
+          EC2_PUBLIC_IP={{ ec2_data.instances[0].public_ip_address }}
+          EC2_INSTANCE_ID={{ ec2_data.instances[0].instance_id }}
+          
+          # RDS Database
+          RDS_ENDPOINT={{ rds_instance.endpoint.address }}
+          RDS_PORT={{ rds_instance.endpoint.port }}
+          
+          # VPC & Networking
+          VPC_ID={{ vpc.vpc.id }}
+          PUBLIC_SUBNET_1_ID={{ subnet_public_1.subnet.id }}
+          PUBLIC_SUBNET_2_ID={{ subnet_public_2.subnet.id }}
+          PRIVATE_SUBNET_1_ID={{ subnet_private_1.subnet.id }}
+          PRIVATE_SUBNET_2_ID={{ subnet_private_2.subnet.id }}
+          INTERNET_GATEWAY_ID={{ igw.gateway_id }}
+          EC2_SECURITY_GROUP_ID={{ ec2_sg.group_id }}
+          RDS_SECURITY_GROUP_ID={{ rds_sg.group_id }}
+        dest: ../infrastructure_outputs.txt
+      delegate_to: localhost
+
+    - name: Wait for SSH to be ready
+      wait_for:
+        host: "{{ ec2_data.instances[0].public_ip_address }}"
+        port: 22
+        timeout: 300
+
+    - name: Add server to dynamic inventory
+      add_host:
+        name: "{{ ec2_data.instances[0].public_ip_address }}"
+        groups: app
+
+
+- name: Configure EC2 and Deploy HouseScanner Application
+  hosts: app
+  user: ubuntu
+  become: yes
+  gather_facts: false
+  vars_files:
+    - group_vars/env.yaml
+    - group_vars/secrets.yaml
+
+  tasks:
+    - name: Wait until instance is fully ready
+      ansible.builtin.wait_for_connection:
+        delay: 10
+        timeout: 900 
+
+    - name: Install prerequisites
+      apt:
+        name:
+          - apt-transport-https
+          - ca-certificates
+          - curl
+          - gnupg
+          - lsb-release
+        state: present
+        update_cache: yes
+
+    - name: Add Docker GPG key
+      shell: curl -fsSL https://download.docker.com/linux/ubuntu/gpg | sudo gpg --dearmor -o /usr/share/keyrings/docker-archive-keyring.gpg
+
+    - name: Add Docker repository
+      apt_repository:
+        repo: "deb [arch=amd64 signed-by=/usr/share/keyrings/docker-archive-keyring.gpg] https://download.docker.com/linux/ubuntu jammy stable"
+        state: present
+        filename: docker
+
+    - name: Install Docker
+      apt:
+        name:
+          - docker-ce
+          - docker-ce-cli
+          - containerd.io
+          - docker-compose-plugin
+        state: latest
+        update_cache: yes
+
+    - name: Enable Docker
+      service:
+        name: docker
+        state: started
+        enabled: yes
+
+    - name: Copy private key for Git
+      copy:
+        src: ~/.ssh/id_rsa
+        dest: /home/ubuntu/.ssh/id_rsa
+        mode: '0600'
+        owner: ubuntu
+        group: ubuntu
+
+    - name: Clone app from GitHub
+      git:
+        repo: "{{ git_repo }}"
+        dest: /opt/housescanner
+        version: "{{ git_branch }}"
+        key_file: /home/ubuntu/.ssh/id_rsa
+        accept_hostkey: yes
+        force: yes
+
+    - name: Update dynamic values in existing .env.prod files
+      ansible.builtin.replace:
+        path: "{{ item.file }}"
+        regexp: "{{ item.search }}"
+        replace: "{{ item.replace }}"
+      loop:
+        # Update EC2 IP in all env files
+        - { file: '/opt/housescanner/agents-service/.env.prod', search: 'YOUR_EC2_DOMAIN', replace: "{{ hostvars['localhost']['ec2_data'].instances[0].public_ip_address }}" }
+        - { file: '/opt/housescanner/backend/.env.prod', search: 'YOUR_EC2_DOMAIN', replace: "{{ hostvars['localhost']['ec2_data'].instances[0].public_ip_address }}" }
+        - { file: '/opt/housescanner/client-pwa/.env.prod', search: 'YOUR_EC2_DOMAIN', replace: "{{ hostvars['localhost']['ec2_data'].instances[0].public_ip_address }}" }
+        # Update RDS endpoint in backend
+        - { file: '/opt/housescanner/backend/.env.prod', search: 'YOUR_RDS_ENDPOINT', replace: "{{ hostvars['localhost']['rds_instance'].endpoint.address }}" }
+
+    - name: Copy database dump file
+      copy:
+        src: ../backend/prisma/house_scanner_dump.sql
+        dest: /tmp/house_scanner_dump.sql
+        mode: '0644'
+
+    - name: Wait for RDS to be available
+      wait_for:
+        host: "{{ hostvars['localhost']['rds_instance'].endpoint.address }}"
+        port: 5432
+        timeout: 600
+        delay: 10
+
+    - name: Install PostgreSQL client
+      apt:
+        name: postgresql-client
+        state: present
+        update_cache: yes
+
+    - name: Import database dump to RDS
+      shell: |
+        PGPASSWORD="{{ db_password }}" psql \
+          -h {{ hostvars['localhost']['rds_instance'].endpoint.address }} \
+          -U {{ db_username }} \
+          -d {{ db_name }} \
+          -f /tmp/house_scanner_dump.sql
+      ignore_errors: yes
+
+    - name: Run Prisma migrations
+      shell: |
+        cd /opt/housescanner/backend
+        npx prisma migrate deploy
+      environment:
+        DATABASE_URL: "postgresql://{{ db_username }}:{{ db_password }}@{{ hostvars['localhost']['rds_instance'].endpoint.address }}:5432/{{ db_name }}"
+      ignore_errors: yes
+
+    - name: Build and start Docker containers with production compose
+      shell: docker compose -f docker-compose.prod.yml up -d --build
+      args:
+        chdir: /opt/housescanner
+      environment:
+        COMPOSE_PROJECT_NAME: housescanner
+      async: 1800  # Allow 30 minutes for build
+      poll: 10  # Check every 10 seconds
+
+    - name: Wait for services to be healthy
+      wait_for:
+        port: "{{ item }}"
+        timeout: 300
+        delay: 10
+      loop:
+        - "{{ agents_service_port }}"
+        - "{{ backend_port }}"
+        - "{{ client_port }}"
+
+    - name: Show deployment information
+      debug:
+        msg: |
+          ========================================
+          HouseScanner Deployment Complete!
+          ========================================
+          EC2 Public IP: {{ hostvars['localhost']['ec2_data'].instances[0].public_ip_address }}
+          
+          Services:
+          - Client PWA: http://{{ hostvars['localhost']['ec2_data'].instances[0].public_ip_address }}:{{ client_port }}
+          - Backend API: http://{{ hostvars['localhost']['ec2_data'].instances[0].public_ip_address }}:{{ backend_port }}/api
+          - Agents Service: http://{{ hostvars['localhost']['ec2_data'].instances[0].public_ip_address }}:{{ agents_service_port }}
+          
+          Database:
+          - RDS Endpoint: {{ hostvars['localhost']['rds_instance'].endpoint.address }}
+          
+          Storage:
+          - S3 Bucket: {{ s3_bucket_name }}
+          ========================================

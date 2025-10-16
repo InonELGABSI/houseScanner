@@ -1,0 +1,56 @@
+# Global Docker ignore for building from repo root
+
+# VCS
+.git/
+.gitignore
+
+# OS
+.DS_Store
+
+# Node
+node_modules/
+**/node_modules/
+dist/
+**/dist/
+.dev-dist/
+**/.dev-dist/
+
+# Python
+__pycache__/
+**/__pycache__/
+.venv/
+venv/
+
+# Env & secrets
+.env
+.env.*
+!.env.example
+**/*.env
+**/group_vars/secrets.yaml
+**/group_vars/*secrets*.yml
+**/group_vars/*secrets*.yaml
+**/*.pem
+**/*.key
+**/id_rsa
+**/id_rsa.pub
+
+# Ansible
+ansible/group_vars/secrets.yaml
+ansible/infrastructure_outputs.txt
+
+# Logs & dumps
+*.log
+**/*.log
+*.sql
+*.dump
+*.db
+*.sqlite
+
+# Build caches
+**/.cache/
+coverage/
+**/.pytest_cache/
+
+# Misc
+/tmp/
+**/tmp/
