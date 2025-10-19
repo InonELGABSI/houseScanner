@@ -69,7 +69,15 @@ jobs:
             timeout 60 sh -c 'until docker inspect --format="{{.State.Health.Status}}" housescanner-backend-1 | grep -q "healthy"; do sleep 2; done' || echo "Health check timeout (service may still be starting)"
             
             # Show status
+            echo "==================================="
+            echo "Container Status:"
             docker ps --filter name=housescanner-backend-1 --format "table {{.Names}}\t{{.Status}}\t{{.Ports}}"
+            
+            # Show recent logs
+            echo ""
+            echo "==================================="
+            echo "Recent Container Logs (last 20 lines):"
+            docker logs --tail 20 housescanner-backend-1
             
             # Clean up old images
             docker image prune -f

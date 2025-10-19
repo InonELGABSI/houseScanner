@@ -51,16 +51,14 @@ jobs:
           cache-from: type=registry,ref=${{ env.DOCKERHUB_USERNAME }}/${{ env.IMAGE_NAME }}:buildcache
           cache-to: type=registry,ref=${{ env.DOCKERHUB_USERNAME }}/${{ env.IMAGE_NAME }}:buildcache,mode=max
 
-      - name: Set up SSH
-        run: |
-          mkdir -p ~/.ssh
-          echo "${{ secrets.EC2_SSH_PRIVATE_KEY }}" > ~/.ssh/housescanner-key.pem
-          chmod 600 ~/.ssh/housescanner-key.pem
-          ssh-keyscan -H ${{ env.EC2_HOST }} >> ~/.ssh/known_hosts
-
-      - name: Deploy to EC2
-        run: |
-          ssh -i ~/.ssh/housescanner-key.pem ${{ env.EC2_USER }}@${{ env.EC2_HOST }} << 'EOF'
+      - name: Deploy to EC2 via SSH
+        uses: appleboy/ssh-action@v1.0.3
+        with:
+          host: ${{ env.EC2_HOST }}
+          username: ${{ env.EC2_USER }}
+          key: ${{ secrets.EC2_SSH_PRIVATE_KEY }}
+          port: 22
+          script: |
             cd /home/ubuntu/housescanner
             
             # Pull the latest image
@@ -74,11 +72,18 @@ jobs:
             timeout 60 sh -c 'until docker inspect --format="{{.State.Health.Status}}" housescanner-client-1 | grep -q "healthy"; do sleep 2; done' || echo "Health check timeout (service may still be starting)"
             
             # Show status
+            echo "==================================="
+            echo "Container Status:"
             docker ps --filter name=housescanner-client-1 --format "table {{.Names}}\t{{.Status}}\t{{.Ports}}"
+            
+            # Show recent logs
+            echo ""
+            echo "==================================="
+            echo "Recent Container Logs (last 20 lines):"
+            docker logs --tail 20 housescanner-client-1
             
             # Clean up old images
             docker image prune -f
-          EOF
 
       - name: Deployment Summary
         run: |
