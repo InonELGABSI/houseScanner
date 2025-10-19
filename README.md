@@ -2,6 +2,18 @@
 
 AI-powered house inspection application with computer vision and intelligent checklist generation.
 
+## Screenshots
+
+![Processing scan progress](./images/process_scan.png)
+
+![Room photo upload interface](./images/upload_scan_images.png)
+
+![Individual room summary](./images/scan_rooms_summary.png)
+
+![Overall scan summary report](./images/scan_summary.png)
+
+![Custom checklist editor](./images/edit_custom_room_checklist.png)
+
 ## Tech Stack
 
 - **Frontend:** React, TypeScript, Vite, TailwindCSS
@@ -51,6 +63,7 @@ cd .. && docker compose -f docker-compose.dev.yml up -d
 - **Backend API:** http://localhost:3000/api/v1 ([Docs](http://localhost:3000/api-docs))
 - **Agents API:** http://localhost:8000 ([Docs](http://localhost:8000/docs))
 - **MinIO Console:** http://localhost:9001 (minio/minio123)
+- **Default Login:** housescanner@gmail.com / 12121212
 
 ### Common Commands
 

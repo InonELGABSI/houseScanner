@@ -22,7 +22,7 @@
     minio_console_port: 9001
     minio_access_key: minio
     minio_secret_key: minio123
-    minio_bucket: house-scanner-images
+    minio_bucket: house-scanner
     
     # Service health check config
     max_wait_time: 120
@@ -276,36 +276,48 @@
           register: mc_pull
           changed_when: "'Downloaded' in mc_pull.stderr or 'Pulled' in mc_pull.stderr"
 
-        - name: Configure MinIO client alias
+        - name: Wait a moment for MinIO to be fully ready
+          pause:
+            seconds: 2
+
+        - name: Configure MinIO client alias using exec
           command: >
-            docker run --rm --network host minio/mc:latest
-            alias set local http://{{ minio_host }}:{{ minio_port }}
+            docker compose -f {{ docker_compose_file }} exec -T minio
+            mc alias set local http://localhost:9000
             {{ minio_access_key }} {{ minio_secret_key }}
+          args:
+            chdir: "{{ project_root }}"
           register: mc_alias
           changed_when: "'successfully created' in mc_alias.stdout or 'added successfully' in mc_alias.stdout"
           failed_when: false
 
         - name: Check if bucket exists
           command: >
-            docker run --rm --network host minio/mc:latest
-            ls local/{{ minio_bucket }}
+            docker compose -f {{ docker_compose_file }} exec -T minio
+            mc ls local/{{ minio_bucket }}
+          args:
+            chdir: "{{ project_root }}"
           register: bucket_check
           changed_when: false
           failed_when: false
 
         - name: Create MinIO bucket
           command: >
-            docker run --rm --network host minio/mc:latest
-            mb local/{{ minio_bucket }}
+            docker compose -f {{ docker_compose_file }} exec -T minio
+            mc mb local/{{ minio_bucket }}
+          args:
+            chdir: "{{ project_root }}"
           register: bucket_create
           when: bucket_check.rc != 0
-          changed_when: bucket_create.rc == 0
+          changed_when: "'Bucket created successfully' in bucket_create.stdout"
           failed_when: false
 
-        - name: Set bucket public read policy
+        - name: Set bucket policy to public read
           command: >
-            docker run --rm --network host minio/mc:latest
-            anonymous set download local/{{ minio_bucket }}
+            docker compose -f {{ docker_compose_file }} exec -T minio
+            mc anonymous set download local/{{ minio_bucket }}
+          args:
+            chdir: "{{ project_root }}"
           register: bucket_policy
           changed_when: "'Access permission for' in bucket_policy.stdout"
           failed_when: false
@@ -317,6 +329,7 @@
               - Bucket: {{ minio_bucket }}
               - Policy: Public read access
               - Console: http://{{ minio_host }}:{{ minio_console_port }}
+              - Access MinIO Console at http://localhost:9001 (login: minio/minio123)
       tags:
         - minio
         - storage

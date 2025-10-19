@@ -571,8 +571,8 @@ export class ScansService {
         return url;
       }
       try {
-        // Generate pre-signed URL valid for 1 hour
-        return await this.storageService.getSignedDownloadUrl(key, 3600);
+        // Generate client-accessible URL valid for 1 hour (signed or public)
+        return await this.storageService.getDownloadUrlForClient(key, 3600);
       } catch (error) {
         this.logger.error(
           `Failed to generate signed URL for ${key}: ${error instanceof Error ? error.message : error}`,

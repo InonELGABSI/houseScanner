@@ -140,6 +140,14 @@ export class StorageService {
     );
   }
 
+  async getDownloadUrlForClient(key: string, expiresInSeconds = 3600): Promise<string> {
+    if (this.shouldUsePublicAccess()) {
+      return this.buildPublicUrl(key);
+    }
+
+    return this.getSignedDownloadUrl(key, expiresInSeconds);
+  }
+
   private buildPublicUrl(key: string): string {
     if (this.publicUrl) {
       return `${this.publicUrl.replace(/\/$/, '')}/${key}`;
@@ -149,5 +157,23 @@ export class StorageService {
       return `${normalizedEndpoint}/${this.bucket}/${key}`;
     }
     return `/${this.bucket}/${key}`;
+  }
+
+  private shouldUsePublicAccess(): boolean {
+    if (!this.publicUrl) {
+      return false;
+    }
+
+    try {
+      const url = new URL(this.publicUrl);
+      return ['localhost', '127.0.0.1'].includes(url.hostname);
+    } catch (error) {
+      this.logger.warn(
+        `Invalid STORAGE_PUBLIC_URL; falling back to signed URLs: ${
+          error instanceof Error ? error.message : error
+        }`,
+      );
+      return false;
+    }
   }
 }
