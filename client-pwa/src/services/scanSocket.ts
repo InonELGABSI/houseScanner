@@ -33,7 +33,7 @@ export interface ScanEvents {
 
 class ScanSocketService {
   private socket: Socket | null = null;
-  private readonly baseUrl = import.meta.env.VITE_API_URL || 'http://localhost:3000';
+  private readonly baseUrl = import.meta.env.VITE_WS_URL || 'http://localhost:3000';
 
   /**
    * Connect to WebSocket after user login

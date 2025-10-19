@@ -83,7 +83,7 @@
       shell: |
         docker buildx build --platform linux/amd64 \
           --build-arg VITE_API_BASE_URL=http://{{ ec2_public_ip }}:3000/api/v1 \
-          --build-arg VITE_WS_URL=ws://{{ ec2_public_ip }}:3000 \
+          --build-arg VITE_WS_URL=http://{{ ec2_public_ip }}:3000 \
           -t {{ dockerhub_username }}/housescanner-client:{{ image_tag }} \
           -f Dockerfile.prod \
           --load \
