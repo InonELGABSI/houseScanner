@@ -2,6 +2,7 @@ import { Injectable, Logger } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import {
   DeleteObjectCommand,
+  GetObjectCommand,
   ListObjectsV2Command,
   PutObjectCommand,
   S3Client,
@@ -121,6 +122,17 @@ export class StorageService {
     return getSignedUrl(
       this.client,
       new PutObjectCommand({
+        Bucket: this.bucket,
+        Key: key,
+      }),
+      { expiresIn: expiresInSeconds },
+    );
+  }
+
+  async getSignedDownloadUrl(key: string, expiresInSeconds = 3600): Promise<string> {
+    return getSignedUrl(
+      this.client,
+      new GetObjectCommand({
         Bucket: this.bucket,
         Key: key,
       }),

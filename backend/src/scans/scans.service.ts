@@ -398,11 +398,35 @@ export class ScansService {
     const mergedChecklists =
       await this.checklistMergeService.getAllMergedChecklists(userId);
 
-    // Prepare rooms data for agents-service
-    const roomsData = scan.rooms.map((room) => ({
-      room_id: room.id,
-      image_urls: room.images.map((img) => img.url),
-    }));
+    // Prepare rooms data for agents-service with pre-signed URLs
+    const roomsData = await Promise.all(
+      scan.rooms.map(async (room) => {
+        const signedImageUrls = await Promise.all(
+          room.images.map(async (img) => {
+            // Extract S3 key from URL
+            const key = this.extractStorageKeyFromUrl(img.url);
+            if (!key) {
+              this.logger.warn(`Could not extract key from URL: ${img.url}`);
+              return img.url; // Fallback to original URL
+            }
+            // Generate pre-signed download URL (valid for 1 hour)
+            try {
+              return await this.storageService.getSignedDownloadUrl(key, 3600);
+            } catch (error) {
+              this.logger.error(
+                `Failed to generate signed URL for ${key}: ${error instanceof Error ? error.message : error}`,
+              );
+              return img.url; // Fallback to original URL
+            }
+          }),
+        );
+
+        return {
+          room_id: room.id,
+          image_urls: signedImageUrls,
+        };
+      }),
+    );
 
     // Update scan status to running
     await this.prisma.scan.update({
