@@ -127,6 +127,17 @@ export const scanAPI = {
     return response.data;
   },
 
+  // Get scan results with detailed information
+  getScanResults: async (scanId: string): Promise<ScanResults> => {
+    const response = await apiClient.get(`/scans/${scanId}/results`);
+    return response.data;
+  },
+
+  // Submit checklist decisions
+  submitChecklist: async (data: ChecklistSubmission): Promise<void> => {
+    await apiClient.post(`/scans/${data.scanId}/checklist`, data);
+  },
+
   // Delete scan (removes scan, rooms, images, summary from DB and storage)
   deleteScan: async (scanId: string): Promise<{ message: string; scanId: string }> => {
     const response = await apiClient.delete(`/scans/${scanId}`);

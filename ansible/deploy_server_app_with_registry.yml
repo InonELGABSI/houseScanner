@@ -527,6 +527,19 @@
         accept_hostkey: yes
         force: yes
 
+    - name: Ensure env files and docker-compose.prod.yml exist and have correct ownership
+      file:
+        path: "/opt/housescanner/{{ item }}"
+        state: touch
+        owner: ubuntu
+        group: ubuntu
+        mode: '0644'
+      loop:
+        - agents-service/.env.prod
+        - backend/.env.prod
+        - client-pwa/.env.prod
+        - docker-compose.prod.yml
+
     - name: Create .env file with image configuration
       copy:
         content: |
@@ -547,6 +560,17 @@
         - { file: '/opt/housescanner/client-pwa/.env.prod', search: 'YOUR_EC2_DOMAIN', replace: "{{ hostvars['localhost']['ec2_data'].instances[0].public_ip_address }}" }
         # Update RDS endpoint in backend
         - { file: '/opt/housescanner/backend/.env.prod', search: 'YOUR_RDS_ENDPOINT', replace: "{{ hostvars['localhost']['rds_instance'].endpoint.address }}" }
+
+    - name: Ensure env.prod files are owned by ubuntu and have correct permissions
+      file:
+        path: "/opt/housescanner/{{ item }}"
+        owner: ubuntu
+        group: ubuntu
+        mode: '0644'
+      loop:
+        - agents-service/.env.prod
+        - backend/.env.prod
+        - client-pwa/.env.prod
 
     - name: Copy database dump file
       copy:

@@ -7,26 +7,19 @@
     - group_vars/env.yaml
     - group_vars/secrets.yaml
   vars:
-    ansible_python_interpreter: /usr/bin/python3
+    ansible_python_interpreter: /Users/inonelgabsi/Desktop/Development/houseScanner/ansible/venv/bin/python
 
   tasks:
-    - name: Confirm teardown
-      pause:
-        prompt: |
-          ⚠️  WARNING: This will DELETE all HouseScanner infrastructure! ⚠️
+    - name: Display teardown warning
+      debug:
+        msg: |
+          ⚠️  PROCEEDING WITH TEARDOWN - DELETING ALL INFRASTRUCTURE! ⚠️
           
-          This includes:
+          This will delete:
           - EC2 instances
           - RDS database (all data will be lost!)
-          - S3 bucket and all stored images
+          - S3 bucket and all stored images  
           - VPC and all networking components
-          
-          Type 'yes' to continue, or press Ctrl+C to abort
-
-    - name: Fail if not confirmed
-      fail:
-        msg: "Teardown cancelled by user"
-      when: not (ansible_user_input | default('no') | lower == 'yes')
 
     - name: Get EC2 instances
       amazon.aws.ec2_instance_info:

@@ -1,0 +1,147 @@
+---
+- name: Step 1 - Build and Push Docker Images to Registry
+  hosts: localhost
+  connection: local
+  gather_facts: True
+  vars_files:
+    - group_vars/env.yaml
+    - group_vars/secrets.yaml
+  vars:
+    ansible_python_interpreter: "{{ playbook_dir }}/venv/bin/python"
+
+  tasks:
+    - name: Verify DockerHub credentials are set
+      fail:
+        msg: "DockerHub credentials not set in secrets.yaml"
+      when: dockerhub_password is not defined or dockerhub_password == ""
+
+    - name: Get git commit hash for image tagging
+      shell: git rev-parse --short HEAD
+      args:
+        chdir: ../
+      register: git_commit
+      changed_when: false
+
+    - name: Set image tag
+      set_fact:
+        image_tag: "{{ git_commit.stdout }}"
+        image_tag_latest: "latest"
+
+    - name: Display build information
+      debug:
+        msg: |
+          Building Docker images with tag: {{ image_tag }}
+          DockerHub username: {{ dockerhub_username }}
+          Images will be pushed to:
+          - {{ dockerhub_username }}/housescanner-agents:{{ image_tag }}
+          - {{ dockerhub_username }}/housescanner-backend:{{ image_tag }}
+          - {{ dockerhub_username }}/housescanner-client:{{ image_tag }}
+
+    - name: Log in to DockerHub
+      community.docker.docker_login:
+        username: "{{ dockerhub_username }}"
+        password: "{{ dockerhub_password }}"
+      no_log: true
+
+    - name: Build Agents Service image for linux/amd64
+      shell: |
+        docker buildx build --platform linux/amd64 \
+          -t {{ dockerhub_username }}/housescanner-agents:{{ image_tag }} \
+          -f Dockerfile.prod \
+          --load \
+          .
+      args:
+        chdir: ../agents-service
+
+    - name: Build Backend image for linux/amd64
+      shell: |
+        docker buildx build --platform linux/amd64 \
+          -t {{ dockerhub_username }}/housescanner-backend:{{ image_tag }} \
+          -f Dockerfile.prod \
+          --load \
+          .
+      args:
+        chdir: ../backend
+
+    - name: Build Client PWA image for linux/amd64
+      shell: |
+        docker buildx build --platform linux/amd64 \
+          -t {{ dockerhub_username }}/housescanner-client:{{ image_tag }} \
+          -f Dockerfile.prod \
+          --load \
+          .
+      args:
+        chdir: ../client-pwa
+
+    - name: Push Agents Service image to DockerHub
+      community.docker.docker_image:
+        name: "{{ dockerhub_username }}/housescanner-agents"
+        tag: "{{ image_tag }}"
+        push: true
+        source: local
+
+    - name: Tag and push Agents Service as latest
+      community.docker.docker_image:
+        name: "{{ dockerhub_username }}/housescanner-agents:{{ image_tag }}"
+        repository: "{{ dockerhub_username }}/housescanner-agents:latest"
+        source: local
+        push: true
+        force_tag: true
+
+    - name: Push Backend image to DockerHub
+      community.docker.docker_image:
+        name: "{{ dockerhub_username }}/housescanner-backend"
+        tag: "{{ image_tag }}"
+        push: true
+        source: local
+
+    - name: Tag and push Backend as latest
+      community.docker.docker_image:
+        name: "{{ dockerhub_username }}/housescanner-backend:{{ image_tag }}"
+        repository: "{{ dockerhub_username }}/housescanner-backend:latest"
+        source: local
+        push: true
+        force_tag: true
+
+    - name: Push Client PWA image to DockerHub
+      community.docker.docker_image:
+        name: "{{ dockerhub_username }}/housescanner-client"
+        tag: "{{ image_tag }}"
+        push: true
+        source: local
+
+    - name: Tag and push Client PWA as latest
+      community.docker.docker_image:
+        name: "{{ dockerhub_username }}/housescanner-client:{{ image_tag }}"
+        repository: "{{ dockerhub_username }}/housescanner-client:latest"
+        source: local
+        push: true
+        force_tag: true
+
+    - name: Log out from DockerHub
+      community.docker.docker_login:
+        state: absent
+
+    - name: Save image tag to file for next steps
+      copy:
+        content: "{{ image_tag }}"
+        dest: ../image_tag.txt
+      delegate_to: localhost
+
+    - name: Display push summary
+      debug:
+        msg: |
+          ========================================
+          Docker Images Built and Pushed Successfully!
+          ========================================
+          Images pushed to DockerHub:
+          ✓ {{ dockerhub_username }}/housescanner-agents:{{ image_tag }}
+          ✓ {{ dockerhub_username }}/housescanner-agents:latest
+          ✓ {{ dockerhub_username }}/housescanner-backend:{{ image_tag }}
+          ✓ {{ dockerhub_username }}/housescanner-backend:latest
+          ✓ {{ dockerhub_username }}/housescanner-client:{{ image_tag }}
+          ✓ {{ dockerhub_username }}/housescanner-client:latest
+          
+          Image tag saved to: ../image_tag.txt
+          Ready to deploy to EC2!
+          ========================================

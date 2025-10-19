@@ -34,9 +34,9 @@ export function useSignup() {
 export function useCreateScan() {
   const queryClient = useQueryClient();
   
-  return useMutation<ScanResponse, Error, FormData>({
-    mutationFn: async (formData: FormData) => {
-      return scanAPI.createScan(formData);
+  return useMutation<{ scanId: string; houseId: string; status: string }, Error, { houseId?: string; address?: string }>({
+    mutationFn: async (data: { houseId?: string; address?: string }) => {
+      return scanAPI.createScan(data);
     },
     onSuccess: () => {
       // Invalidate scan history to refresh the list

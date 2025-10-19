@@ -1,0 +1,304 @@
+---
+- name: Step 3 - Deploy HouseScanner Application to EC2
+  hosts: localhost
+  connection: local
+  gather_facts: False
+  vars_files:
+    - group_vars/env.yaml
+    - group_vars/secrets.yaml
+
+  tasks:
+    - name: Read infrastructure outputs from Step 2
+      slurp:
+        src: "../infrastructure_outputs.txt"
+      register: infra_outputs_raw
+
+    - name: Parse infrastructure outputs
+      set_fact:
+        infra_lines: "{{ infra_outputs_raw.content | b64decode | split('\n') }}"
+
+    - name: Extract infrastructure values
+      set_fact:
+        ec2_public_ip: "{{ infra_lines | select('match', '^EC2_PUBLIC_IP=') | first | regex_replace('^EC2_PUBLIC_IP=', '') }}"
+        rds_endpoint: "{{ infra_lines | select('match', '^RDS_ENDPOINT=') | first | regex_replace('^RDS_ENDPOINT=', '') }}"
+        rds_port: "{{ infra_lines | select('match', '^RDS_PORT=') | first | regex_replace('^RDS_PORT=', '') }}"
+
+    - name: Read image tag from Step 1
+      slurp:
+        src: "../image_tag.txt"
+      register: image_tag_content
+
+    - name: Set deployment image tag
+      set_fact:
+        deployment_image_tag: "{{ image_tag_content.content | b64decode | trim }}"
+
+    - name: Display deployment information
+      debug:
+        msg: |
+          ========================================
+          Step 3: Application Deployment
+          ========================================
+          Target EC2 IP: {{ ec2_public_ip }}
+          Docker Image Tag: {{ deployment_image_tag }}
+          DockerHub Username: {{ dockerhub_username }}
+          
+          Images to deploy:
+          - {{ dockerhub_username }}/housescanner-agents:{{ deployment_image_tag }}
+          - {{ dockerhub_username }}/housescanner-backend:{{ deployment_image_tag }}
+          - {{ dockerhub_username }}/housescanner-client:{{ deployment_image_tag }}
+          ========================================
+
+    - name: Add EC2 to inventory
+      add_host:
+        name: "{{ ec2_public_ip }}"
+        groups: app
+        ansible_user: ubuntu
+        ansible_ssh_private_key_file: "~/.ssh/{{ keypair }}.pem"
+        ansible_ssh_common_args: "-o StrictHostKeyChecking=no"
+        ec2_public_ip: "{{ ec2_public_ip }}"
+        rds_endpoint: "{{ rds_endpoint }}"
+        rds_port: "{{ rds_port }}"
+        deployment_image_tag: "{{ deployment_image_tag }}"
+
+- name: Configure EC2 and Deploy HouseScanner Application
+  hosts: app
+  user: ubuntu
+  become: yes
+  gather_facts: true
+  vars_files:
+    - group_vars/env.yaml
+    - group_vars/secrets.yaml
+
+  tasks:
+    - name: Wait until instance is fully ready
+      ansible.builtin.wait_for_connection:
+        delay: 10
+        timeout: 900
+
+    - name: Install prerequisites
+      apt:
+        name:
+          - apt-transport-https
+          - ca-certificates
+          - curl
+          - gnupg
+          - lsb-release
+          - python3-pip
+        state: present
+        update_cache: yes
+
+    - name: Add Docker GPG key
+      shell: curl -fsSL https://download.docker.com/linux/ubuntu/gpg | sudo gpg --dearmor -o /usr/share/keyrings/docker-archive-keyring.gpg
+      args:
+        creates: /usr/share/keyrings/docker-archive-keyring.gpg
+
+    - name: Add Docker repository
+      apt_repository:
+        repo: "deb [arch=amd64 signed-by=/usr/share/keyrings/docker-archive-keyring.gpg] https://download.docker.com/linux/ubuntu {{ ansible_distribution_release }} stable"
+        state: present
+        filename: docker
+        update_cache: yes
+
+    - name: Install Docker
+      apt:
+        name:
+          - docker-ce
+          - docker-ce-cli
+          - containerd.io
+          - docker-compose-plugin
+        state: present
+        update_cache: yes
+
+    - name: Add ubuntu user to docker group
+      user:
+        name: ubuntu
+        groups: docker
+        append: yes
+
+    - name: Start and enable Docker service
+      systemd:
+        name: docker
+        state: started
+        enabled: yes
+
+    - name: Log in to DockerHub on EC2
+      community.docker.docker_login:
+        username: "{{ dockerhub_username }}"
+        password: "{{ dockerhub_password }}"
+        registry_url: "{{ docker_registry }}"
+      no_log: true
+
+    - name: Create application directory
+      file:
+        path: /opt/housescanner
+        state: directory
+        owner: ubuntu
+        group: ubuntu
+        mode: '0755'
+
+    - name: Ensure .ssh directory exists for ubuntu user
+      file:
+        path: /home/ubuntu/.ssh
+        state: directory
+        owner: ubuntu
+        group: ubuntu
+        mode: '0700'
+
+    - name: Copy SSH private key for Git (if using private repo)
+      copy:
+        src: ~/.ssh/id_rsa
+        dest: /home/ubuntu/.ssh/id_rsa
+        mode: '0600'
+        owner: ubuntu
+        group: ubuntu
+      ignore_errors: yes
+
+    - name: Add GitHub to known hosts
+      shell: ssh-keyscan -H github.com >> /home/ubuntu/.ssh/known_hosts
+      args:
+        creates: /home/ubuntu/.ssh/known_hosts
+      become_user: ubuntu
+
+    - name: Clone repository from GitHub
+      git:
+        repo: "{{ git_repo }}"
+        dest: /opt/housescanner
+        version: "{{ git_branch }}"
+        key_file: /home/ubuntu/.ssh/id_rsa
+        accept_hostkey: yes
+        force: yes
+      become_user: ubuntu
+
+    - name: Create top-level .env file with Docker registry credentials
+      copy:
+        content: |
+          DOCKERHUB_USERNAME={{ dockerhub_username }}
+          IMAGE_TAG={{ deployment_image_tag }}
+        dest: /opt/housescanner/.env
+        owner: ubuntu
+        group: ubuntu
+        mode: '0644'
+
+    - name: Update dynamic values in agents-service/.env.prod
+      ansible.builtin.replace:
+        path: /opt/housescanner/agents-service/.env.prod
+        regexp: "{{ item.search }}"
+        replace: "{{ item.replace }}"
+      loop:
+        - { search: 'YOUR_EC2_DOMAIN', replace: "{{ ec2_public_ip }}" }
+        - { search: 'your-s3-bucket-name', replace: "{{ s3_bucket_name }}" }
+        - { search: 'your-aws-region', replace: "{{ zone }}" }
+
+    - name: Update dynamic values in backend/.env.prod
+      ansible.builtin.replace:
+        path: /opt/housescanner/backend/.env.prod
+        regexp: "{{ item.search }}"
+        replace: "{{ item.replace }}"
+      loop:
+        - { search: 'YOUR_EC2_DOMAIN', replace: "{{ ec2_public_ip }}" }
+        - { search: 'YOUR_RDS_ENDPOINT', replace: "{{ rds_endpoint }}" }
+        - { search: 'your-db-username', replace: "{{ db_username }}" }
+        - { search: 'your-db-password', replace: "{{ db_password }}" }
+        - { search: 'your-db-name', replace: "{{ db_name }}" }
+        - { search: 'your-s3-bucket-name', replace: "{{ s3_bucket_name }}" }
+        - { search: 'your-aws-region', replace: "{{ zone }}" }
+
+    - name: Update dynamic values in client-pwa/.env.prod
+      ansible.builtin.replace:
+        path: /opt/housescanner/client-pwa/.env.prod
+        regexp: "{{ item.search }}"
+        replace: "{{ item.replace }}"
+      loop:
+        - { search: 'YOUR_EC2_DOMAIN', replace: "{{ ec2_public_ip }}" }
+
+    - name: Install PostgreSQL client
+      apt:
+        name: postgresql-client
+        state: present
+
+    - name: Wait for RDS to be available
+      wait_for:
+        host: "{{ rds_endpoint }}"
+        port: "{{ rds_port }}"
+        timeout: 300
+        delay: 10
+
+    - name: Copy database dump file
+      copy:
+        src: ../backend/prisma/house_scanner_dump.sql
+        dest: /tmp/house_scanner_dump.sql
+        mode: '0644'
+
+    - name: Import database dump to RDS
+      shell: |
+        PGPASSWORD="{{ db_password }}" psql \
+          -h {{ rds_endpoint }} \
+          -U {{ db_username }} \
+          -d {{ db_name }} \
+          -f /tmp/house_scanner_dump.sql
+      ignore_errors: yes
+
+    - name: Pull Docker images
+      shell: docker compose -f docker-compose.prod.yml pull
+      args:
+        chdir: /opt/housescanner
+      environment:
+        DOCKERHUB_USERNAME: "{{ dockerhub_username }}"
+        IMAGE_TAG: "{{ deployment_image_tag }}"
+      become_user: ubuntu
+
+    - name: Stop existing containers (if any)
+      shell: docker compose -f docker-compose.prod.yml down || true
+      args:
+        chdir: /opt/housescanner
+      become_user: ubuntu
+      ignore_errors: yes
+
+    - name: Start HouseScanner services with Docker Compose
+      shell: docker compose -f docker-compose.prod.yml up -d
+      args:
+        chdir: /opt/housescanner
+      environment:
+        COMPOSE_PROJECT_NAME: housescanner
+        DOCKERHUB_USERNAME: "{{ dockerhub_username }}"
+        IMAGE_TAG: "{{ deployment_image_tag }}"
+      become_user: ubuntu
+
+    - name: Wait for services to be ready
+      wait_for:
+        port: "{{ item }}"
+        timeout: 300
+        delay: 10
+      loop:
+        - "{{ agents_service_port }}"
+        - "{{ backend_port }}"
+        - "{{ client_port }}"
+
+    - name: Display deployment summary
+      debug:
+        msg: |
+          ========================================
+          🎉 HouseScanner Deployment Complete!
+          ========================================
+          
+          🌐 Application URLs:
+          • Client PWA: http://{{ ec2_public_ip }}:{{ client_port }}
+          • Backend API: http://{{ ec2_public_ip }}:{{ backend_port }}/api
+          • Agents Service: http://{{ ec2_public_ip }}:{{ agents_service_port }}
+          
+          🏗️ Infrastructure:
+          • EC2 Instance: {{ ec2_public_ip }} ({{ server_type }})
+          • Database: {{ rds_endpoint }}:{{ rds_port }}
+          • Storage: {{ s3_bucket_name }}
+          
+          🐳 Docker Images:
+          • {{ dockerhub_username }}/housescanner-backend:{{ deployment_image_tag }}
+          • {{ dockerhub_username }}/housescanner-agents:{{ deployment_image_tag }}
+          • {{ dockerhub_username }}/housescanner-client:{{ deployment_image_tag }}
+          
+          📝 Management Commands:
+          • SSH: ssh -i ~/.ssh/{{ keypair }}.pem ubuntu@{{ ec2_public_ip }}
+          • Logs: docker compose -f docker-compose.prod.yml logs -f
+          • Restart: docker compose -f docker-compose.prod.yml restart
+          • Stop: docker compose -f docker-compose.prod.yml down
+          ========================================
