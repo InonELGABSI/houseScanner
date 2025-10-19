@@ -20,9 +20,6 @@ services:
   # Agents Service - Production
   agents-service:
     image: ${DOCKERHUB_USERNAME:-your_dockerhub_username}/housescanner-agents:${IMAGE_TAG:-latest}
-    build:
-      context: ./agents-service
-      dockerfile: Dockerfile.prod
     restart: unless-stopped
     ports:
       - "8000:8000"
@@ -48,9 +45,6 @@ services:
   # Backend - Production
   backend:
     image: ${DOCKERHUB_USERNAME:-your_dockerhub_username}/housescanner-backend:${IMAGE_TAG:-latest}
-    build:
-      context: ./backend
-      dockerfile: Dockerfile.prod
     restart: unless-stopped
     ports:
       - "3000:3000"
@@ -76,9 +70,6 @@ services:
   # Client PWA - Production
   client:
     image: ${DOCKERHUB_USERNAME:-your_dockerhub_username}/housescanner-client:${IMAGE_TAG:-latest}
-    build:
-      context: ./client-pwa
-      dockerfile: Dockerfile.prod
     restart: unless-stopped
     ports:
       - "8080:8080"

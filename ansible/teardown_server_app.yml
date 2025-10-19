@@ -78,6 +78,67 @@
         force: yes
       ignore_errors: yes
 
+    - name: Get and release any Elastic IPs
+      amazon.aws.ec2_eip_info:
+        region: "{{ zone }}"
+        filters:
+          tag:Environment: "{{ env }}"
+      register: eip_info
+      ignore_errors: yes
+
+    - name: Release Elastic IPs
+      amazon.aws.ec2_eip:
+        region: "{{ zone }}"
+        public_ip: "{{ item.public_ip }}"
+        state: absent
+      loop: "{{ eip_info.addresses }}"
+      when: 
+        - eip_info.addresses is defined
+        - eip_info.addresses | length > 0
+      ignore_errors: yes
+
+    - name: Get EBS snapshots created by this deployment
+      amazon.aws.ec2_snapshot_info:
+        region: "{{ zone }}"
+        owner_ids: ["self"]
+        filters:
+          tag:Environment: "{{ env }}"
+      register: snapshot_info
+      ignore_errors: yes
+
+    - name: Delete EBS snapshots
+      amazon.aws.ec2_snapshot:
+        region: "{{ zone }}"
+        snapshot_id: "{{ item.snapshot_id }}"
+        state: absent
+      loop: "{{ snapshot_info.snapshots }}"
+      when: 
+        - snapshot_info.snapshots is defined 
+        - snapshot_info.snapshots | length > 0
+      ignore_errors: yes
+
+    - name: Get any NAT Gateways (just in case)
+      amazon.aws.ec2_vpc_nat_gateway_info:
+        region: "{{ zone }}"
+        filters:
+          vpc-id: "{{ target_vpc_id }}"
+      register: nat_gw_info
+      when: target_vpc_id is defined
+      ignore_errors: yes
+
+    - name: Delete NAT Gateways
+      amazon.aws.ec2_vpc_nat_gateway:
+        region: "{{ zone }}"
+        nat_gateway_id: "{{ item.nat_gateway_id }}"
+        state: absent
+        wait: yes
+      loop: "{{ nat_gw_info.result }}"
+      when: 
+        - target_vpc_id is defined
+        - nat_gw_info.result is defined
+        - nat_gw_info.result | length > 0
+      ignore_errors: yes
+
     - name: Get VPC info
       amazon.aws.ec2_vpc_net_info:
         region: "{{ zone }}"
@@ -203,6 +264,9 @@
           ✓ EC2 instances ({{ server_name }})
           ✓ RDS database ({{ db_instance_identifier }})
           ✓ S3 bucket ({{ s3_bucket_name }})
+          ✓ Elastic IPs (if any)
+          ✓ EBS snapshots (if any)
+          ✓ NAT Gateways (if any)
           ✓ Security groups
           ✓ Subnets
           ✓ Internet Gateway
