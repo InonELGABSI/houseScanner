@@ -3,7 +3,7 @@ name: Deploy Agents Service to EC2
 on:
   push:
     branches:
-      - 
+      - main
     paths:
       - 'agents-service/**'
       - '.github/workflows/deploy-agents.yml'
