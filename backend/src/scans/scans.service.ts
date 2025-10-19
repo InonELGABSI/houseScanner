@@ -554,6 +554,60 @@ export class ScansService {
       throw new NotFoundException('Scan not found');
     }
 
+    // Convert all S3 URLs to pre-signed URLs for client access
+    const scanWithSignedUrls = await this.convertScanUrlsToSigned(scan);
+
+    return scanWithSignedUrls;
+  }
+
+  /**
+   * Convert all S3 URLs in a scan object to pre-signed URLs
+   */
+  private async convertScanUrlsToSigned(scan: any): Promise<any> {
+    const signUrl = async (url: string): Promise<string> => {
+      const key = this.extractStorageKeyFromUrl(url);
+      if (!key) {
+        this.logger.warn(`Could not extract key from URL: ${url}`);
+        return url;
+      }
+      try {
+        // Generate pre-signed URL valid for 1 hour
+        return await this.storageService.getSignedDownloadUrl(key, 3600);
+      } catch (error) {
+        this.logger.error(
+          `Failed to generate signed URL for ${key}: ${error instanceof Error ? error.message : error}`,
+        );
+        return url;
+      }
+    };
+
+    // Convert room image URLs
+    if (scan.rooms && Array.isArray(scan.rooms)) {
+      scan.rooms = await Promise.all(
+        scan.rooms.map(async (room) => {
+          if (room.images && Array.isArray(room.images)) {
+            room.images = await Promise.all(
+              room.images.map(async (image) => ({
+                ...image,
+                url: await signUrl(image.url),
+              })),
+            );
+          }
+          return room;
+        }),
+      );
+    }
+
+    // Convert scan-level image URLs
+    if (scan.images && Array.isArray(scan.images)) {
+      scan.images = await Promise.all(
+        scan.images.map(async (image) => ({
+          ...image,
+          url: await signUrl(image.url),
+        })),
+      );
+    }
+
     return scan;
   }
 
