@@ -3,7 +3,7 @@ name: Deploy Agents Service to EC2
 on:
   push:
     branches:
-      - main
+      - 
     paths:
       - 'agents-service/**'
       - '.github/workflows/deploy-agents.yml'
@@ -15,27 +15,29 @@ env:
   EC2_USER: ubuntu
 
 jobs:
-  build-and-deploy:
+  build:
     runs-on: ubuntu-latest
+    outputs:
+      sha_short: ${{ steps.vars.outputs.sha_short }}
     
     steps:
-      - name: Checkout code
+      - name: 📥 Checkout code
         uses: actions/checkout@v4
 
-      - name: Set up Docker Buildx
+      - name: 🔧 Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
 
-      - name: Log in to DockerHub
+      - name: 🔐 Log in to DockerHub
         uses: docker/login-action@v3
         with:
           username: ${{ secrets.DOCKERHUB_USERNAME }}
           password: ${{ secrets.DOCKERHUB_TOKEN }}
 
-      - name: Get short commit SHA
+      - name: 🏷️ Get short commit SHA
         id: vars
         run: echo "sha_short=$(git rev-parse --short HEAD)" >> $GITHUB_OUTPUT
 
-      - name: Build and push Docker image
+      - name: 🏗️ Build and push Docker image
         uses: docker/build-push-action@v5
         with:
           context: ./agents-service
@@ -48,36 +50,69 @@ jobs:
           cache-from: type=registry,ref=${{ env.DOCKERHUB_USERNAME }}/${{ env.IMAGE_NAME }}:buildcache
           cache-to: type=registry,ref=${{ env.DOCKERHUB_USERNAME }}/${{ env.IMAGE_NAME }}:buildcache,mode=max
 
-      - name: Deploy to EC2 via SSH
+      - name: ✅ Build Summary
+        run: |
+          echo "📦 Built: ${{ env.DOCKERHUB_USERNAME }}/${{ env.IMAGE_NAME }}:${{ steps.vars.outputs.sha_short }}"
+          echo "🏷️ Also tagged as: latest"
+
+  deploy:
+    needs: build
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: 🚀 Deploy to EC2 via SSH
         uses: appleboy/ssh-action@v1.0.3
         with:
           host: ${{ env.EC2_HOST }}
           username: ${{ env.EC2_USER }}
           key: ${{ secrets.EC2_SSH_PRIVATE_KEY }}
           port: 22
-          debug: true
           script: |
+            echo "================================================"
+            echo "🔄 Starting Agents Service Deployment"
+            echo "================================================"
+            
             cd /home/ubuntu/housescanner
             
             # Pull the latest image
+            echo "📥 Pulling latest image..."
             docker pull ${{ env.DOCKERHUB_USERNAME }}/${{ env.IMAGE_NAME }}:latest
             
             # Restart the agents service with zero downtime
+            echo "🔄 Restarting agents service..."
             docker compose -f docker-compose.prod.yml up -d --no-deps --build agents-service
             
             # Wait for health check
-            echo "Waiting for agents service to be healthy..."
-            timeout 60 sh -c 'until docker inspect --format="{{.State.Health.Status}}" housescanner-agents-service-1 | grep -q "healthy"; do sleep 2; done' || echo "Health check timeout (service may still be starting)"
+            echo "⏳ Waiting for agents service to be healthy..."
+            timeout 60 sh -c 'until docker inspect --format="{{.State.Health.Status}}" housescanner-agents-service-1 2>/dev/null | grep -q "healthy"; do sleep 2; echo "  Still waiting..."; done' && echo "✅ Service is healthy!" || echo "⚠️  Health check timeout (service may still be starting)"
             
             # Show status
+            echo ""
+            echo "================================================"
+            echo "📊 Container Status:"
+            echo "================================================"
             docker ps --filter name=housescanner-agents-service-1 --format "table {{.Names}}\t{{.Status}}\t{{.Ports}}"
             
+            # Show recent logs
+            echo ""
+            echo "================================================"
+            echo "📋 Recent Container Logs (last 20 lines):"
+            echo "================================================"
+            docker logs --tail 20 housescanner-agents-service-1
+            
             # Clean up old images
+            echo ""
+            echo "🧹 Cleaning up old images..."
             docker image prune -f
+            
+            echo ""
+            echo "================================================"
+            echo "✅ Deployment Complete!"
+            echo "================================================"
 
-      - name: Deployment Summary
+      - name: 🎉 Deployment Summary
         run: |
           echo "🎉 Agents Service Deployment Complete!"
-          echo "📦 Image: ${{ env.DOCKERHUB_USERNAME }}/${{ env.IMAGE_NAME }}:${{ steps.vars.outputs.sha_short }}"
+          echo "📦 Image: ${{ env.DOCKERHUB_USERNAME }}/${{ env.IMAGE_NAME }}:${{ needs.build.outputs.sha_short }}"
           echo "🌐 Service: http://${{ env.EC2_HOST }}:8000"
           echo "🏷️  Commit: ${{ github.sha }}"
