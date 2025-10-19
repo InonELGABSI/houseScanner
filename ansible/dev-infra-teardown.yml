@@ -1,0 +1,80 @@
+---
+- name: Teardown Local Development Infrastructure
+  hosts: localhost
+  connection: local
+  gather_facts: False
+  vars:
+    project_root: "{{ playbook_dir }}/.."
+    docker_compose_file: "{{ project_root }}/docker-compose.dev.yml"
+
+  tasks:
+    - name: Display teardown warning
+      debug:
+        msg: |
+          ⚠️  LOCAL DEVELOPMENT INFRASTRUCTURE TEARDOWN ⚠️
+          
+          This will:
+          - Stop all Docker Compose services
+          - Optionally remove volumes (data will be LOST!)
+          
+          To remove volumes and data, use:
+            ansible-playbook dev-infra-teardown.yml --extra-vars "remove_volumes=true"
+
+    - name: Stop all Docker Compose services
+      command: docker compose -f {{ docker_compose_file }} down
+      args:
+        chdir: "{{ project_root }}"
+      register: compose_down
+      changed_when: "'Stopped' in compose_down.stderr or 'Removed' in compose_down.stderr"
+
+    - name: Display service stop status
+      debug:
+        msg: "✅ All services stopped"
+
+    - name: Remove Docker volumes (if requested)
+      block:
+        - name: Confirm volume removal
+          debug:
+            msg: |
+              ⚠️  REMOVING VOLUMES - ALL DATA WILL BE LOST!
+              - PostgreSQL data
+              - MinIO data (uploaded files)
+
+        - name: Remove volumes
+          command: docker compose -f {{ docker_compose_file }} down -v
+          args:
+            chdir: "{{ project_root }}"
+          register: volume_remove
+          changed_when: "'Removed' in volume_remove.stderr"
+
+        - name: Display volume removal status
+          debug:
+            msg: "✅ Volumes removed successfully"
+      when: remove_volumes | default(false) | bool
+
+    - name: Data persistence notice
+      debug:
+        msg: |
+          ℹ️  Services stopped, but data persists in Docker volumes.
+          ℹ️  To completely remove data, run:
+          ansible-playbook dev-infra-teardown.yml --extra-vars "remove_volumes=true"
+      when: not (remove_volumes | default(false) | bool)
+
+    - name: Display cleanup summary
+      debug:
+        msg: |
+          ==========================================
+          ✅ Development Infrastructure Teardown Complete
+          ==========================================
+          
+          Status:
+          - Services: Stopped
+          - Volumes: {{ 'Removed (data deleted)' if (remove_volumes | default(false) | bool) else 'Preserved (data intact)' }}
+          
+          To restart infrastructure:
+            ansible-playbook dev-infra-setup.yml
+          
+          To start services with existing data:
+            cd {{ project_root }}
+            docker compose -f docker-compose.dev.yml up -d
+          ==========================================

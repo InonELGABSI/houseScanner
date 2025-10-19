@@ -1,0 +1,379 @@
+---
+- name: Setup Local Development Infrastructure
+  hosts: localhost
+  connection: local
+  gather_facts: True
+  vars:
+    project_root: "{{ playbook_dir }}/.."
+    docker_compose_file: "{{ project_root }}/docker-compose.dev.yml"
+    db_dump_file: "{{ project_root }}/backend/prisma/house_scanner_dump.sql"
+    backend_path: "{{ project_root }}/backend"
+    
+    # Database config (matches docker-compose.dev.yml)
+    postgres_db: house_scanner
+    postgres_user: house_scanner
+    postgres_password: house_scanner
+    postgres_host: localhost
+    postgres_port: 5432
+    
+    # MinIO config (matches docker-compose.dev.yml)
+    minio_host: localhost
+    minio_port: 9000
+    minio_console_port: 9001
+    minio_access_key: minio
+    minio_secret_key: minio123
+    minio_bucket: house-scanner-images
+    
+    # Service health check config
+    max_wait_time: 120
+    check_interval: 5
+
+  tasks:
+    - name: Display setup information
+      debug:
+        msg: |
+          ==========================================
+          Local Development Infrastructure Setup
+          ==========================================
+          This playbook will:
+          1. Start Docker Compose services
+          2. Wait for services to be healthy
+          3. Import database dump
+          4. Run Prisma migrations
+          5. Create and configure MinIO bucket
+          6. Display access information
+          
+          Project: {{ project_root }}
+          Docker Compose: {{ docker_compose_file }}
+          ==========================================
+
+    - name: Check prerequisites
+      block:
+        - name: Check if Docker is installed
+          command: docker --version
+          register: docker_check
+          changed_when: false
+          failed_when: false
+
+        - name: Check if Docker Compose is installed
+          command: docker compose version
+          register: compose_check
+          changed_when: false
+          failed_when: false
+
+        - name: Fail if Docker is not installed
+          fail:
+            msg: |
+              ❌ Docker is not installed or not running!
+              Please install Docker Desktop: https://www.docker.com/products/docker-desktop
+          when: docker_check.rc != 0
+
+        - name: Fail if Docker Compose is not installed
+          fail:
+            msg: |
+              ❌ Docker Compose is not installed!
+              Please install Docker Compose or use Docker Desktop
+          when: compose_check.rc != 0
+
+        - name: Check if docker-compose.dev.yml exists
+          stat:
+            path: "{{ docker_compose_file }}"
+          register: compose_file
+
+        - name: Fail if docker-compose.dev.yml not found
+          fail:
+            msg: "❌ Docker Compose file not found: {{ docker_compose_file }}"
+          when: not compose_file.stat.exists
+
+        - name: Check if DB dump file exists
+          stat:
+            path: "{{ db_dump_file }}"
+          register: dump_file
+
+    - name: Start Docker Compose services
+      block:
+        - name: Pull latest images
+          command: docker compose -f {{ docker_compose_file }} pull
+          args:
+            chdir: "{{ project_root }}"
+          register: pull_result
+          changed_when: "'Pulled' in pull_result.stderr or 'Downloaded' in pull_result.stderr"
+
+        - name: Start infrastructure services (postgres, redis, minio)
+          command: docker compose -f {{ docker_compose_file }} up -d postgres redis minio
+          args:
+            chdir: "{{ project_root }}"
+          register: compose_up
+          changed_when: "'Started' in compose_up.stderr or 'Created' in compose_up.stderr"
+
+        - name: Display service startup status
+          debug:
+            msg: "✅ Docker Compose infrastructure services starting..."
+
+    - name: Wait for services to be healthy
+      block:
+        - name: Wait for PostgreSQL to be ready
+          command: >
+            docker compose -f {{ docker_compose_file }} exec -T postgres
+            pg_isready -U {{ postgres_user }}
+          args:
+            chdir: "{{ project_root }}"
+          register: postgres_ready
+          until: postgres_ready.rc == 0
+          retries: "{{ max_wait_time // check_interval }}"
+          delay: "{{ check_interval }}"
+          changed_when: false
+
+        - name: Wait for Redis to be ready
+          command: >
+            docker compose -f {{ docker_compose_file }} exec -T redis
+            redis-cli ping
+          args:
+            chdir: "{{ project_root }}"
+          register: redis_ready
+          until: redis_ready.rc == 0 and 'PONG' in redis_ready.stdout
+          retries: "{{ max_wait_time // check_interval }}"
+          delay: "{{ check_interval }}"
+          changed_when: false
+
+        - name: Wait for MinIO to be ready
+          uri:
+            url: "http://{{ minio_host }}:{{ minio_port }}/minio/health/live"
+            status_code: 200
+          register: minio_ready
+          until: minio_ready.status == 200
+          retries: "{{ max_wait_time // check_interval }}"
+          delay: "{{ check_interval }}"
+
+        - name: Display health check status
+          debug:
+            msg: |
+              ✅ All infrastructure services are healthy!
+              - PostgreSQL: Ready
+              - Redis: Ready
+              - MinIO: Ready
+
+    - name: Setup PostgreSQL Database
+      block:
+        - name: Check if database has tables
+          command: >
+            docker compose -f {{ docker_compose_file }} exec -T postgres
+            psql -U {{ postgres_user }} -d {{ postgres_db }} -tAc
+            "SELECT COUNT(*) FROM information_schema.tables WHERE table_schema='public'"
+          args:
+            chdir: "{{ project_root }}"
+          register: table_count
+          changed_when: false
+          failed_when: false
+
+        - name: Set database state
+          set_fact:
+            db_is_empty: "{{ table_count.stdout | trim == '0' }}"
+            db_needs_import: "{{ force_import | default(false) or (table_count.stdout | trim == '0') }}"
+
+        - name: Display database status
+          debug:
+            msg: |
+              Database Status:
+              - Tables found: {{ table_count.stdout | trim }}
+              - Database is empty: {{ db_is_empty }}
+              - Will import dump: {{ db_needs_import }}
+
+        - name: Import database dump
+          block:
+            - name: Drop existing database (if force import)
+              command: >
+                docker compose -f {{ docker_compose_file }} exec -T postgres
+                psql -U {{ postgres_user }} -d postgres -c
+                "DROP DATABASE IF EXISTS {{ postgres_db }}"
+              args:
+                chdir: "{{ project_root }}"
+              when: force_import | default(false)
+
+            - name: Create database (if needed)
+              command: >
+                docker compose -f {{ docker_compose_file }} exec -T postgres
+                psql -U {{ postgres_user }} -d postgres -c
+                "CREATE DATABASE {{ postgres_db }}"
+              args:
+                chdir: "{{ project_root }}"
+              when: force_import | default(false)
+              failed_when: false
+
+            - name: Import SQL dump
+              shell: >
+                docker compose -f {{ docker_compose_file }} exec -T postgres
+                psql -U {{ postgres_user }} -d {{ postgres_db }} < {{ db_dump_file }}
+              args:
+                chdir: "{{ project_root }}"
+              register: import_result
+              when: db_needs_import and dump_file.stat.exists
+
+            - name: Display import status
+              debug:
+                msg: "✅ Database dump imported successfully!"
+              when: db_needs_import and dump_file.stat.exists
+
+            - name: Skip import message
+              debug:
+                msg: "ℹ️  Database already has data. Use --extra-vars 'force_import=true' to re-import."
+              when: not db_needs_import
+
+            - name: Warning if dump file missing
+              debug:
+                msg: "⚠️  Database dump file not found: {{ db_dump_file }}"
+              when: not dump_file.stat.exists
+          when: db_needs_import or force_import | default(false)
+      tags:
+        - db
+        - database
+
+    - name: Run Prisma migrations (optional)
+      block:
+        - name: Check if Prisma is available
+          stat:
+            path: "{{ backend_path }}/node_modules/.bin/prisma"
+          register: prisma_bin
+
+        - name: Check if package.json exists
+          stat:
+            path: "{{ backend_path }}/package.json"
+          register: backend_package
+
+        - name: Install backend dependencies if needed
+          command: npm install
+          args:
+            chdir: "{{ backend_path }}"
+          when: backend_package.stat.exists and not prisma_bin.stat.exists
+
+        - name: Run Prisma migrations
+          command: npx prisma migrate deploy
+          args:
+            chdir: "{{ backend_path }}"
+          environment:
+            DATABASE_URL: "postgresql://{{ postgres_user }}:{{ postgres_password }}@{{ postgres_host }}:{{ postgres_port }}/{{ postgres_db }}"
+          register: prisma_migrate
+          when: prisma_bin.stat.exists or backend_package.stat.exists
+          failed_when: false
+
+        - name: Display Prisma migration status
+          debug:
+            msg: "✅ Prisma migrations applied successfully!"
+          when: prisma_migrate.rc is defined and prisma_migrate.rc == 0
+
+        - name: Skip Prisma message
+          debug:
+            msg: "ℹ️  Prisma not found or backend not set up. Skipping migrations."
+          when: not backend_package.stat.exists
+      tags:
+        - prisma
+        - migrations
+
+    - name: Setup MinIO Storage
+      block:
+        - name: Install MinIO client (mc) if not present
+          command: docker pull minio/mc:latest
+          register: mc_pull
+          changed_when: "'Downloaded' in mc_pull.stderr or 'Pulled' in mc_pull.stderr"
+
+        - name: Configure MinIO client alias
+          command: >
+            docker run --rm --network host minio/mc:latest
+            alias set local http://{{ minio_host }}:{{ minio_port }}
+            {{ minio_access_key }} {{ minio_secret_key }}
+          register: mc_alias
+          changed_when: "'successfully created' in mc_alias.stdout or 'added successfully' in mc_alias.stdout"
+          failed_when: false
+
+        - name: Check if bucket exists
+          command: >
+            docker run --rm --network host minio/mc:latest
+            ls local/{{ minio_bucket }}
+          register: bucket_check
+          changed_when: false
+          failed_when: false
+
+        - name: Create MinIO bucket
+          command: >
+            docker run --rm --network host minio/mc:latest
+            mb local/{{ minio_bucket }}
+          register: bucket_create
+          when: bucket_check.rc != 0
+          changed_when: bucket_create.rc == 0
+          failed_when: false
+
+        - name: Set bucket public read policy
+          command: >
+            docker run --rm --network host minio/mc:latest
+            anonymous set download local/{{ minio_bucket }}
+          register: bucket_policy
+          changed_when: "'Access permission for' in bucket_policy.stdout"
+          failed_when: false
+
+        - name: Display MinIO setup status
+          debug:
+            msg: |
+              ✅ MinIO Storage Configured!
+              - Bucket: {{ minio_bucket }}
+              - Policy: Public read access
+              - Console: http://{{ minio_host }}:{{ minio_console_port }}
+      tags:
+        - minio
+        - storage
+        - bucket
+
+    - name: Display development environment information
+      debug:
+        msg: |
+          ==========================================
+          ✅ Development Infrastructure Ready!
+          ==========================================
+          
+          📊 SERVICES STATUS:
+          - PostgreSQL: Running (port {{ postgres_port }})
+          - Redis: Running (port 6379)
+          - MinIO: Running (ports {{ minio_port }}, {{ minio_console_port }})
+          
+          🗄️  DATABASE:
+          - Host: {{ postgres_host }}:{{ postgres_port }}
+          - Database: {{ postgres_db }}
+          - User: {{ postgres_user }}
+          - Connection: postgresql://{{ postgres_user }}:{{ postgres_password }}@{{ postgres_host }}:{{ postgres_port }}/{{ postgres_db }}
+          
+          📦 STORAGE (MinIO):
+          - Endpoint: http://{{ minio_host }}:{{ minio_port }}
+          - Console: http://{{ minio_host }}:{{ minio_console_port }}
+          - Access Key: {{ minio_access_key }}
+          - Secret Key: {{ minio_secret_key }}
+          - Bucket: {{ minio_bucket }}
+          
+          🚀 NEXT STEPS:
+          1. Start application services:
+             cd {{ project_root }}
+             docker compose -f docker-compose.dev.yml up -d
+          
+          2. View logs:
+             docker compose -f docker-compose.dev.yml logs -f
+          
+          3. Stop services (keeps data):
+             docker compose -f docker-compose.dev.yml down
+          
+          4. Reset infrastructure:
+             ansible-playbook dev-infra-setup.yml --extra-vars "force_import=true"
+          
+          5. Reset specific components:
+             ansible-playbook dev-infra-setup.yml --tags db --extra-vars "force_import=true"
+             ansible-playbook dev-infra-setup.yml --tags bucket
+          
+          ==========================================
+          💡 Data persists in Docker volumes!
+          💡 Services can be stopped/started without losing data
+          ==========================================
+
+    - name: Reminder about application services
+      debug:
+        msg: |
+          ℹ️  Note: This playbook only started infrastructure services (postgres, redis, minio).
+          
+          To start the application services (backend, agents, client), run:
+          docker compose -f docker-compose.dev.yml up -d
