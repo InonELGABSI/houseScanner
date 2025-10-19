@@ -39,6 +39,12 @@
       loop: "{{ ec2_instances.instances }}"
       when: ec2_instances.instances | length > 0
 
+    - name: Wait for EC2 instances to fully terminate
+      pause:
+        seconds: 30
+        prompt: "Waiting for EC2 instances to fully terminate before cleaning up security groups..."
+      when: ec2_instances.instances | length > 0
+
     - name: Get RDS instances
       amazon.aws.rds_instance_info:
         region: "{{ zone }}"
@@ -93,7 +99,6 @@
     - name: Get EBS snapshots created by this deployment
       amazon.aws.ec2_snapshot_info:
         region: "{{ zone }}"
-        owner_ids: ["self"]
         filters:
           tag:Environment: "{{ env }}"
       register: snapshot_info
@@ -158,6 +163,10 @@
         name: "{{ vpc_name }}-ec2-sg"
         region: "{{ zone }}"
         state: absent
+      register: delete_ec2_sg
+      until: delete_ec2_sg is not failed
+      retries: 5
+      delay: 10
       ignore_errors: yes
       when: target_vpc_id is defined
 
@@ -166,6 +175,10 @@
         name: "{{ vpc_name }}-rds-sg"
         region: "{{ zone }}"
         state: absent
+      register: delete_rds_sg
+      until: delete_rds_sg is not failed
+      retries: 5
+      delay: 10
       ignore_errors: yes
       when: target_vpc_id is defined
 
@@ -236,8 +249,12 @@
         cidr_block: "{{ network }}"
         region: "{{ zone }}"
         state: absent
-      when: target_vpc_id is defined
+      register: delete_vpc
+      until: delete_vpc is not failed
+      retries: 5
+      delay: 10
       ignore_errors: yes
+      when: target_vpc_id is defined
 
     - name: Remove infrastructure outputs file
       file:

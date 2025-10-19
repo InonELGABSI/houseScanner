@@ -8,12 +8,18 @@ __pycache__/
 *.so
 .venv/
 venv/
+
+# Exclude actual env files with secrets
 .env
-.env.*
-!.env.example
-*.env.local
-*.env.development*
-*.env.production*
+.env.prod
+**/.env
+**/.env.prod
+
+# But allow all template files
+!.env.template
+!.env.prod.template
+!**/.env.template
+!**/.env.prod.template
 
 # Node/TypeScript
 node_modules/
@@ -48,6 +54,17 @@ Thumbs.db
 ansible/group_vars/secrets.yaml
 ansible/group_vars/secrets.yml
 ansible/group_vars/*secrets*.yml
+infrastructure_outputs.txt
+image_tag.txt
+
+
+
+# SSH Keys
+**/*.pem
+**/*.key
+**/id_rsa
+**/id_rsa.pub
+.ssh/
 ansible/group_vars/*secrets*.yaml
 ansible/.vault_pass
 ansible/**/.vault_pass

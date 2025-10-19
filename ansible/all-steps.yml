@@ -629,7 +629,7 @@
 
     - name: Create application directory
       file:
-        path: /home/ubuntu/housescanner
+        path: /opt/housescanner
         state: directory
         owner: ubuntu
         group: ubuntu
@@ -661,7 +661,7 @@
     - name: Clone repository from GitHub
       git:
         repo: "{{ git_repo }}"
-        dest: /home/ubuntu/housescanner
+        dest: /opt/housescanner
         version: "{{ git_branch }}"
         key_file: /home/ubuntu/.ssh/id_rsa
         accept_hostkey: yes
@@ -673,14 +673,14 @@
         content: |
           DOCKERHUB_USERNAME={{ dockerhub_username }}
           IMAGE_TAG={{ deployment_image_tag }}
-        dest: /home/ubuntu/housescanner/.env
+        dest: /opt/housescanner/.env
         owner: ubuntu
         group: ubuntu
         mode: '0644'
 
     - name: Update dynamic values in agents-service/.env.prod
       ansible.builtin.replace:
-        path: /home/ubuntu/housescanner/agents-service/.env.prod
+        path: /opt/housescanner/agents-service/.env.prod
         regexp: "{{ item.search }}"
         replace: "{{ item.replace }}"
       loop:
@@ -690,7 +690,7 @@
 
     - name: Update dynamic values in backend/.env.prod
       ansible.builtin.replace:
-        path: /home/ubuntu/housescanner/backend/.env.prod
+        path: /opt/housescanner/backend/.env.prod
         regexp: "{{ item.search }}"
         replace: "{{ item.replace }}"
       loop:
@@ -707,7 +707,7 @@
 
     - name: Update dynamic values in client-pwa/.env.prod
       ansible.builtin.replace:
-        path: /home/ubuntu/housescanner/client-pwa/.env.prod
+        path: /opt/housescanner/client-pwa/.env.prod
         regexp: "{{ item.search }}"
         replace: "{{ item.replace }}"
       loop:
@@ -743,7 +743,7 @@
     - name: Pull Docker images
       shell: docker compose -f docker-compose.prod.yml pull
       args:
-        chdir: /home/ubuntu/housescanner
+        chdir: /opt/housescanner
       environment:
         DOCKERHUB_USERNAME: "{{ dockerhub_username }}"
         IMAGE_TAG: "{{ deployment_image_tag }}"
@@ -752,14 +752,14 @@
     - name: Stop existing containers (if any)
       shell: docker compose -f docker-compose.prod.yml down || true
       args:
-        chdir: /home/ubuntu/housescanner
+        chdir: /opt/housescanner
       become_user: ubuntu
       ignore_errors: yes
 
     - name: Start HouseScanner services with Docker Compose
       shell: docker compose -f docker-compose.prod.yml up -d
       args:
-        chdir: /home/ubuntu/housescanner
+        chdir: /opt/housescanner
       environment:
         COMPOSE_PROJECT_NAME: housescanner
         DOCKERHUB_USERNAME: "{{ dockerhub_username }}"
@@ -769,7 +769,7 @@
     - name: Wait for services to be ready
       wait_for:
         port: "{{ item }}"
-        timeout: 300
+        timeout: 30
         delay: 10
       loop:
         - "{{ agents_service_port }}"
