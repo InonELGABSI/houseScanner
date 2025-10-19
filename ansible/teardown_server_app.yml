@@ -7,9 +7,32 @@
     - group_vars/env.yaml
     - group_vars/secrets.yaml
   vars:
-    ansible_python_interpreter: /Users/inonelgabsi/Desktop/Development/houseScanner/ansible/venv/bin/python
+    ansible_python_interpreter: "{{ playbook_dir }}/venv/bin/python"
 
   tasks:
+    - name: Ensure venv exists and requirements are installed
+      block:
+        - name: Check if venv exists
+          stat:
+            path: "{{ playbook_dir }}/venv"
+          register: venv_check
+
+        - name: Create venv if it doesn't exist
+          command: python3 -m venv "{{ playbook_dir }}/venv"
+          when: not venv_check.stat.exists
+
+        - name: Install/Upgrade pip in venv
+          pip:
+            name: pip
+            state: latest
+            virtualenv: "{{ playbook_dir }}/venv"
+
+        - name: Install requirements from requirements.txt
+          pip:
+            requirements: "{{ playbook_dir }}/requirements.txt"
+            virtualenv: "{{ playbook_dir }}/venv"
+            state: present
+
     - name: Display teardown warning
       debug:
         msg: |
