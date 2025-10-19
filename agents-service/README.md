@@ -2,6 +2,8 @@
 
 Advanced house inspection and scanning service built with FastAPI and clean architecture principles.
 
+> 🚀 **CI/CD Enabled**: Automated deployments via GitHub Actions
+
 ## Features
 
 - 🏠 **Comprehensive Analysis**: 6-agent AI pipeline for house, room, and product evaluation
