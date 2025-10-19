@@ -24,7 +24,7 @@ import { Logger } from '@nestjs/common';
  */
 @WebSocketGateway({
   cors: {
-    origin: process.env.CORS_ORIGIN || 'http://localhost:5173',
+    origin: process.env.CORS_ORIGINS?.split(',').map(o => o.trim()) || ['http://localhost:5173'],
     credentials: true,
   },
   namespace: '/scans',
