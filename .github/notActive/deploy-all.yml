@@ -1,0 +1,118 @@
+name: Deploy All Services to EC2
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - 'backend/**'
+      - 'agents-service/**'
+      - 'client-pwa/**'
+      - 'docker-compose.prod.yml'
+      - '.github/workflows/deploy-all.yml'
+
+env:
+  DOCKERHUB_USERNAME: ${{ secrets.DOCKERHUB_USERNAME }}
+  EC2_HOST: ${{ secrets.EC2_HOST }}
+  EC2_USER: ubuntu
+
+jobs:
+  build-and-push-all:
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Log in to DockerHub
+        uses: docker/login-action@v3
+        with:
+          username: ${{ secrets.DOCKERHUB_USERNAME }}
+          password: ${{ secrets.DOCKERHUB_TOKEN }}
+
+      - name: Get short commit SHA
+        id: vars
+        run: echo "sha_short=$(git rev-parse --short HEAD)" >> $GITHUB_OUTPUT
+
+      - name: Build and push Backend image
+        uses: docker/build-push-action@v5
+        with:
+          context: ./backend
+          file: ./backend/Dockerfile.prod
+          platforms: linux/amd64
+          push: true
+          tags: |
+            ${{ env.DOCKERHUB_USERNAME }}/housescanner-backend:${{ steps.vars.outputs.sha_short }}
+            ${{ env.DOCKERHUB_USERNAME }}/housescanner-backend:latest
+
+      - name: Build and push Agents Service image
+        uses: docker/build-push-action@v5
+        with:
+          context: ./agents-service
+          file: ./agents-service/Dockerfile.prod
+          platforms: linux/amd64
+          push: true
+          tags: |
+            ${{ env.DOCKERHUB_USERNAME }}/housescanner-agents:${{ steps.vars.outputs.sha_short }}
+            ${{ env.DOCKERHUB_USERNAME }}/housescanner-agents:latest
+
+      - name: Build and push Client PWA image
+        uses: docker/build-push-action@v5
+        with:
+          context: ./client-pwa
+          file: ./client-pwa/Dockerfile.prod
+          platforms: linux/amd64
+          push: true
+          build-args: |
+            VITE_API_URL=http://${{ env.EC2_HOST }}:3000/api/v1
+            VITE_WS_URL=http://${{ env.EC2_HOST }}:3000
+          tags: |
+            ${{ env.DOCKERHUB_USERNAME }}/housescanner-client:${{ steps.vars.outputs.sha_short }}
+            ${{ env.DOCKERHUB_USERNAME }}/housescanner-client:latest
+
+      - name: Set up SSH
+        run: |
+          mkdir -p ~/.ssh
+          echo "${{ secrets.EC2_SSH_PRIVATE_KEY }}" > ~/.ssh/housescanner-key.pem
+          chmod 600 ~/.ssh/housescanner-key.pem
+          ssh-keyscan -H ${{ env.EC2_HOST }} >> ~/.ssh/known_hosts
+
+      - name: Deploy all services to EC2
+        run: |
+          ssh -i ~/.ssh/housescanner-key.pem ${{ env.EC2_USER }}@${{ env.EC2_HOST }} << 'EOF'
+            cd /home/ubuntu/housescanner
+            
+            # Pull all latest images
+            docker compose -f docker-compose.prod.yml pull
+            
+            # Restart all services with zero downtime (recreates containers with new images)
+            docker compose -f docker-compose.prod.yml up -d --force-recreate --no-build
+            
+            # Wait for all services to be healthy
+            echo "Waiting for services to be healthy..."
+            sleep 10
+            
+            # Show status of all services
+            docker ps --filter name=housescanner --format "table {{.Names}}\t{{.Status}}\t{{.Ports}}"
+            
+            # Clean up old images
+            docker image prune -f
+          EOF
+
+      - name: Deployment Summary
+        run: |
+          echo "🎉 Full Stack Deployment Complete!"
+          echo "📦 Images deployed:"
+          echo "  • Backend: ${{ env.DOCKERHUB_USERNAME }}/housescanner-backend:${{ steps.vars.outputs.sha_short }}"
+          echo "  • Agents: ${{ env.DOCKERHUB_USERNAME }}/housescanner-agents:${{ steps.vars.outputs.sha_short }}"
+          echo "  • Client: ${{ env.DOCKERHUB_USERNAME }}/housescanner-client:${{ steps.vars.outputs.sha_short }}"
+          echo ""
+          echo "🌐 Services:"
+          echo "  • Client PWA: http://${{ env.EC2_HOST }}:8080"
+          echo "  • Backend API: http://${{ env.EC2_HOST }}:3000"
+          echo "  • Agents Service: http://${{ env.EC2_HOST }}:8000"
+          echo ""
+          echo "🏷️  Commit: ${{ github.sha }}"
