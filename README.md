@@ -4,15 +4,19 @@ AI-powered house inspection application with computer vision and intelligent che
 
 ## Screenshots
 
-![Processing scan progress](./images/process_scan.png)
-
-![Room photo upload interface](./images/upload_scan_images.png)
-
-![Individual room summary](./images/scan_rooms_summary.png)
-
-![Overall scan summary report](./images/scan_summary.png)
-
-![Custom checklist editor](./images/edit_custom_room_checklist.png)
+<table>
+   <tr>
+      <td><img src="./images/process_scan.png" alt="Processing scan progress" width="320" /></td>
+      <td><img src="./images/upload_scan_images.png" alt="Room photo upload interface" width="320" /></td>
+   </tr>
+   <tr>
+      <td><img src="./images/scan_rooms_summary.png" alt="Individual room summary" width="320" /></td>
+      <td><img src="./images/scan_summary.png" alt="Overall scan summary report" width="320" /></td>
+   </tr>
+   <tr>
+      <td colspan="2" align="center"><img src="./images/edit_custom_room_checklist.png" alt="Custom checklist editor" width="420" /></td>
+   </tr>
+</table>
 
 ## Tech Stack
 
