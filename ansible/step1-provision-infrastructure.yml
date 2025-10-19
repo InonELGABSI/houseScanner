@@ -1,5 +1,5 @@
 ---
-- name: Step 2 - Provision HouseScanner Infrastructure (VPC, EC2, RDS, S3)
+- name: Step 1 - Provision HouseScanner Infrastructure (VPC, EC2, RDS, S3)
   hosts: localhost
   connection: local
   gather_facts: True
@@ -10,14 +10,16 @@
     ansible_python_interpreter: /Users/inonelgabsi/Desktop/Development/houseScanner/ansible/venv/bin/python
 
   tasks:
-    - name: Read image tag from Step 1
-      slurp:
-        src: ../image_tag.txt
-      register: image_tag_content
+    - name: Get git commit hash for tracking
+      shell: git rev-parse --short HEAD
+      args:
+        chdir: ../
+      register: git_commit
+      changed_when: false
 
     - name: Set deployment image tag
       set_fact:
-        deployment_image_tag: "{{ image_tag_content.content | b64decode | trim }}"
+        deployment_image_tag: "{{ git_commit.stdout }}"
 
     - name: Check if infrastructure already exists
       block:
@@ -365,7 +367,7 @@
     - name: Save infrastructure outputs to file
       copy:
         content: |
-          # HouseScanner Infrastructure Outputs - Step 2 Complete
+          # HouseScanner Infrastructure Outputs - Step 1 Complete
           # Generated on {{ ansible_date_time.iso8601 }} (Idempotent Run)
           # Docker Image Tag: {{ deployment_image_tag }}
           
@@ -474,5 +476,5 @@
           ✅ NO DUPLICATES: Existing resources are detected and preserved
           
           📄 Infrastructure outputs saved to: ../infrastructure_outputs.txt
-          🚀 Ready for Step 3 - Application Deployment!
+          🚀 Ready for Step 2 - Build Images with correct API URLs!
           ========================================

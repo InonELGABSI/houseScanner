@@ -202,6 +202,9 @@
         - { search: 'your-db-name', replace: "{{ db_name }}" }
         - { search: 'your-s3-bucket-name', replace: "{{ s3_bucket_name }}" }
         - { search: 'your-aws-region', replace: "{{ zone }}" }
+        - { search: 'STORAGE_ENDPOINT=https://s3.your-aws-region.amazonaws.com', replace: "STORAGE_ENDPOINT=https://s3.{{ zone }}.amazonaws.com" }
+        - { search: 'STORAGE_ACCESS_KEY=AWS_ACCESS_KEY_ID_PLACEHOLDER', replace: "STORAGE_ACCESS_KEY={{ aws_access_key_id }}" }
+        - { search: 'STORAGE_SECRET_KEY=AWS_SECRET_ACCESS_KEY_PLACEHOLDER', replace: "STORAGE_SECRET_KEY={{ aws_secret_access_key }}" }
 
     - name: Update dynamic values in client-pwa/.env.prod
       ansible.builtin.replace:
@@ -267,7 +270,7 @@
     - name: Wait for services to be ready
       wait_for:
         port: "{{ item }}"
-        timeout: 300
+        timeout: 30
         delay: 10
       loop:
         - "{{ agents_service_port }}"

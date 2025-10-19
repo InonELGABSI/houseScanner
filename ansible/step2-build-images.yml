@@ -1,5 +1,5 @@
 ---
-- name: Step 1 - Build and Push Docker Images to Registry
+- name: Step 2 - Build and Push Docker Images to Registry
   hosts: localhost
   connection: local
   gather_facts: True
@@ -10,6 +10,19 @@
     ansible_python_interpreter: "{{ playbook_dir }}/venv/bin/python"
 
   tasks:
+    - name: Read infrastructure outputs from Step 1
+      slurp:
+        src: "../infrastructure_outputs.txt"
+      register: infra_outputs_raw
+
+    - name: Parse infrastructure outputs
+      set_fact:
+        infra_lines: "{{ infra_outputs_raw.content | b64decode | split('\n') }}"
+
+    - name: Extract infrastructure values
+      set_fact:
+        ec2_public_ip: "{{ infra_lines | select('match', '^EC2_PUBLIC_IP=') | first | regex_replace('^EC2_PUBLIC_IP=', '') }}"
+
     - name: Verify DockerHub credentials are set
       fail:
         msg: "DockerHub credentials not set in secrets.yaml"
@@ -32,6 +45,9 @@
         msg: |
           Building Docker images with tag: {{ image_tag }}
           DockerHub username: {{ dockerhub_username }}
+          EC2 Public IP: {{ ec2_public_ip }}
+          Client will be built with API URL: http://{{ ec2_public_ip }}:3000/api/v1
+          
           Images will be pushed to:
           - {{ dockerhub_username }}/housescanner-agents:{{ image_tag }}
           - {{ dockerhub_username }}/housescanner-backend:{{ image_tag }}
@@ -66,6 +82,8 @@
     - name: Build Client PWA image for linux/amd64
       shell: |
         docker buildx build --platform linux/amd64 \
+          --build-arg VITE_API_BASE_URL=http://{{ ec2_public_ip }}:3000/api/v1 \
+          --build-arg VITE_WS_URL=ws://{{ ec2_public_ip }}:3000 \
           -t {{ dockerhub_username }}/housescanner-client:{{ image_tag }} \
           -f Dockerfile.prod \
           --load \

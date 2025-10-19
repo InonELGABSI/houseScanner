@@ -1,6 +1,10 @@
 # Build stage
 FROM node:20-alpine AS builder
 
+# Build arguments for environment variables
+ARG VITE_API_BASE_URL=http://localhost:3000/api/v1
+ARG VITE_WS_URL=ws://localhost:3000
+
 WORKDIR /app
 
 # Copy package files
@@ -9,6 +13,11 @@ RUN npm ci && npm cache clean --force
 
 # Copy source and build
 COPY . .
+
+# Set environment variables for build
+ENV VITE_API_BASE_URL=$VITE_API_BASE_URL
+ENV VITE_WS_URL=$VITE_WS_URL
+
 RUN npm run build
 
 # Production stage
