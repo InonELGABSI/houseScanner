@@ -26,6 +26,12 @@ class Settings(BaseSettings):
     VISION_MODEL: str = Field(default="gpt-4o-mini", env="VISION_MODEL")
     TEXT_MODEL: str = Field(default="gpt-4o-mini", env="TEXT_MODEL")
     
+    # LangSmith Configuration (for tracing and visualization)
+    LANGCHAIN_TRACING_V2: str = Field(default="true", env="LANGCHAIN_TRACING_V2")
+    LANGCHAIN_ENDPOINT: str = Field(default="https://api.smith.langchain.com", env="LANGCHAIN_ENDPOINT")
+    LANGCHAIN_API_KEY: str = Field(default="", env="LANGCHAIN_API_KEY")
+    LANGCHAIN_PROJECT: str = Field(default="house-scanner-agents", env="LANGCHAIN_PROJECT")
+    
     # Redis Configuration (for caching)
     REDIS_URL: str = Field(default="redis://localhost:6379", env="REDIS_URL")
     CACHE_EXPIRE_SECONDS: int = Field(default=3600, env="CACHE_EXPIRE_SECONDS")  # 1 hour
@@ -49,10 +55,15 @@ class Settings(BaseSettings):
     CLASSIFY_QUALITY: int = Field(default=70, env="CLASSIFY_QUALITY")
     CHECKLIST_QUALITY: int = Field(default=80, env="CHECKLIST_QUALITY")
     
-    # Rate Limiting
+    # Rate Limiting (Legacy - for sequential pipeline)
     THROTTLE_MS: int = Field(default=0, env="THROTTLE_MS")
     TOKEN_PACE_LIMIT: int = Field(default=160000, env="TOKEN_PACE_LIMIT")
     TOKEN_PACE_SLEEP: float = Field(default=8.0, env="TOKEN_PACE_SLEEP")
+    
+    # LangGraph Rate Limiting (for parallel pipeline)
+    RATE_LIMIT_TPM: int = Field(default=90000, env="RATE_LIMIT_TPM")  # Tokens per minute
+    RATE_LIMIT_RPM: int = Field(default=500, env="RATE_LIMIT_RPM")    # Requests per minute
+    MAX_CONCURRENT_CALLS: int = Field(default=3, env="MAX_CONCURRENT_CALLS")  # Concurrent LLM calls
     
     # Retry Configuration
     EMPTY_RETRY: int = Field(default=1, env="EMPTY_RETRY")

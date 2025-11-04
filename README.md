@@ -22,10 +22,88 @@ AI-powered house inspection application with computer vision and intelligent che
 
 - **Frontend:** React, TypeScript, Vite, TailwindCSS
 - **Backend:** NestJS, Prisma, PostgreSQL
-- **AI/ML:** FastAPI, LangChain, OpenAI
+- **AI/ML:** FastAPI, LangChain, LangGraph, OpenAI
 - **Storage:** MinIO (S3-compatible), AWS S3
 - **Cache:** Redis
 - **Infrastructure:** Docker, Ansible, AWS
+
+### AI Workflow Architecture (LangGraph)
+
+The AI agents service uses **LangGraph** to orchestrate a sophisticated 6-agent pipeline with parallel processing:
+
+```mermaid
+flowchart TD
+    START([📸 Upload Images]) --> A1[🏠 Agent 1: House Classification]
+    A1 --> A2[📋 Agent 2: House Checklist]
+    A2 --> PARALLEL[🔄 Parallel Room Processing]
+    
+    PARALLEL --> A3[🚪 Agent 3: Room Classification]
+    PARALLEL --> A4[✅ Agent 4: Room Checklist] 
+    PARALLEL --> A5[🛋️ Agent 5: Products Analysis]
+    
+    A3 --> A6[⚖️ Agent 6: Pros/Cons Analysis]
+    A4 --> A6
+    A5 --> A6
+    
+    A6 --> END([📊 Final Report])
+    
+    classDef startEnd fill:#e1f5fe
+    classDef agents fill:#f3e5f5
+    classDef parallel fill:#e8f5e8
+    
+    class START,END startEnd
+    class A1,A2,A3,A4,A5,A6 agents
+    class PARALLEL parallel
+```
+
+**ASCII Flow Diagram:**
+```
+┌─────────────────┐
+│ 📸 Upload Images │
+└─────────┬───────┘
+          │
+          ▼
+┌─────────────────────────┐
+│ 🏠 Agent 1: House Types │
+│    Classification       │
+└──────────┬──────────────┘
+           │
+           ▼
+┌─────────────────────────┐
+│ 📋 Agent 2: House       │
+│    Checklist Evaluation │
+└──────────┬──────────────┘
+           │
+           ▼
+┌─────────────────────────┐
+│ 🔄 Parallel Processing  │
+│ ┌─────────────────────┐ │
+│ │🚪 Agent 3: Rooms   │ │ ⚡ 3-5x
+│ │✅ Agent 4: Checklist│ │   Faster
+│ │🛋️ Agent 5: Products│ │ 
+│ └─────────────────────┘ │
+└──────────┬──────────────┘
+           │
+           ▼
+┌─────────────────────────┐
+│ ⚖️ Agent 6: Pros/Cons   │
+│    Final Analysis       │
+└──────────┬──────────────┘
+           │
+           ▼
+┌─────────────────┐
+│ 📊 Final Report │
+└─────────────────┘
+```
+
+**Key Features:**
+- **Parallel Processing**: Rooms are analyzed concurrently for 3-5x speedup
+- **LangSmith Tracing**: Live workflow monitoring at [smith.langchain.com](https://smith.langchain.com)
+- **Rate Limiting**: Intelligent throttling (90K TPM, 500 RPM) 
+- **State Management**: Persistent checkpointing with memory
+- **Error Handling**: Automatic retries with state preservation
+
+**Monitoring**: Visit [LangSmith Dashboard](https://smith.langchain.com) → project: "house-check" to view live execution traces.
 
 ---
 

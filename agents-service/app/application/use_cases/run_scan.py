@@ -13,7 +13,7 @@ from app.domain.models import HouseResult, RoomResult
 from app.application.services.preprocess import ImagePreprocessor
 from app.application.services.aggregation import ResultAggregator
 from app.application.services.cost_manager import CostManager
-from app.application.use_cases.run_agent_pipeline import RunAgentPipelineUseCase
+from app.application.use_cases.run_agent_pipeline_langgraph import RunAgentPipelineLangGraphUseCase
 from app.infrastructure.storage.fetch import ImageFetcher
 from app.infrastructure.llm.agents import AgentsService
 from app.core.settings import Settings
@@ -79,7 +79,7 @@ class RunScanUseCase:
             logger.info(f"📸 [REQ-{request_id}] Preprocessed {len(all_images)} images from {len(rooms_map)} rooms")
             
             # Step 2: Create and run agent pipeline with pre-merged checklists
-            agent_pipeline = RunAgentPipelineUseCase(
+            agent_pipeline = RunAgentPipelineLangGraphUseCase(
                 agents_service=self.agents_service,
                 cost_manager=self.cost_manager,
                 settings=self.settings,

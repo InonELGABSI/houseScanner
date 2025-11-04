@@ -13,7 +13,7 @@ from app.domain.models import HouseResult, RoomResult
 from app.application.services.preprocess import ImagePreprocessor
 from app.application.services.aggregation import ResultAggregator
 from app.application.services.cost_manager import CostManager
-from app.application.use_cases.run_agent_pipeline import RunAgentPipelineUseCase
+from app.application.use_cases.run_agent_pipeline_langgraph import RunAgentPipelineLangGraphUseCase
 from app.infrastructure.loaders.base_house_loader import BaseHouseLoader
 from app.infrastructure.loaders.base_rooms_loader import BaseRoomsLoader
 from app.infrastructure.loaders.base_products_loader import BaseProductsLoader
@@ -103,7 +103,7 @@ class RunSimulationUseCase:
             products_checklist = self._merge_products_checklist_for_simulation(products_checklist_base, custom_checklist)
             
             # Step 3: Create and run agent pipeline with merged checklists
-            agent_pipeline = RunAgentPipelineUseCase(
+            agent_pipeline = RunAgentPipelineLangGraphUseCase(
                 agents_service=self.agents_service,
                 cost_manager=self.cost_manager,
                 settings=self.settings
