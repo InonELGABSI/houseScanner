@@ -1,20 +1,5 @@
 import { apiClient } from './client';
-
-export interface Checklist {
-  id: string;
-  scope: 'house' | 'room' | 'product';
-  name: string;
-  version: number;
-  itemsRaw: Record<string, unknown>;
-  createdAt: string;
-  isBase?: boolean;
-}
-
-export interface UpdateChecklistData {
-  name?: string;
-  version?: number;
-  itemsRaw?: Record<string, unknown>;
-}
+import type { Checklist, UpdateChecklistData } from '../types/checklists';
 
 export const checklistsAPI = {
   // Get base checklist for a scope

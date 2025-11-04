@@ -1,16 +1,7 @@
 import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { scanAPI } from '../../api/scan';
-
-interface HistoryItem {
-  id: string;
-  address?: string;
-  date: string;
-  status: string;
-  totalRooms: number;
-  totalProducts: number;
-  thumbnail?: string;
-}
+import type { HistoryItem } from '../../types';
 
 export function HistoryPage() {
   const [history, setHistory] = useState<HistoryItem[]>([]);

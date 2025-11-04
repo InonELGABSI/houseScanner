@@ -1,8 +1,8 @@
 import { useState, useEffect } from 'react';
 import { useAuth } from '../../context/AuthContext';
 import { useNavigate } from 'react-router-dom';
-import { usersAPI } from '../../api/users';
-import { checklistsAPI, Checklist } from '../../api/checklists';
+import { usersAPI, checklistsAPI } from '../../api';
+import type { Checklist } from '../../types/checklists';
 
 type ChecklistScope = 'house' | 'room' | 'product';
 

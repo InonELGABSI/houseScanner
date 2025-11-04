@@ -2,59 +2,7 @@ import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useScan } from '../../context/ScanContext';
 import { scanAPI } from '../../api/scan';
-
-interface ScanDetailsResponse {
-  id: string;
-  status: string;
-  houseId: string;
-  createdAt: string;
-  startedAt: string | null;
-  finishedAt: string | null;
-  detectedHouseTypes: string[];
-  house: {
-    id: string;
-    address: string | null;
-    houseType: string | null;
-    status: string;
-    createdAt: string;
-    updatedAt: string;
-  };
-  rooms: Array<{
-    id: string;
-    ordinal: number;
-    label: string;
-    detectedRoomTypes: string[];
-    images: Array<{
-      id: string;
-      url: string;
-      tag: string | null;
-      createdAt: string;
-    }>;
-  }>;
-  images: Array<{
-    id: string;
-    url: string;
-    tag: string | null;
-    roomId: string;
-    createdAt: string;
-  }>;
-  summary: {
-    id: string;
-    summaryJson: any;
-    prosConsJson: any;
-    costSummary: any;
-    derivedAt: string;
-  } | null;
-  agentRuns: Array<{
-    id: string;
-    agentName: string;
-    tokensIn: number;
-    tokensOut: number;
-    costUsd: number | null;
-    startedAt: string;
-    finishedAt: string;
-  }>;
-}
+import type { ScanDetailsResponse } from '../../types';
 
 export function ScanSummaryStep() {
   const { state, dispatch } = useScan();

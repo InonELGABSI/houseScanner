@@ -1,9 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
-
-interface CameraPanelProps {
-  onCapture: (file: File, url: string) => void;
-  onCameraError?: () => void;
-}
+import type { CameraPanelProps } from '../../../types';
 
 export function CameraPanel({ onCapture, onCameraError }: CameraPanelProps) {
   const videoRef = useRef<HTMLVideoElement>(null);

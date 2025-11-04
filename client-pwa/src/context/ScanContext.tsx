@@ -1,63 +1,16 @@
 import { createContext, useContext, useReducer } from 'react';
 import type { ReactNode } from 'react';
-
-// Core domain types (can refine later when server schemas are available)
-export type ImageRef = { id: string; roomIndex: number; file: File | null; url: string };
-export type HouseType = string; // server may return multiple types
-export type RoomType = string;  // multiple possible
-export type ProductType = string;
-
-export interface ChecklistAnswer {
-  id: string;              // unique key (house/room/product/custom:<id>)
-  scope: 'house' | 'room' | 'product' | 'custom';
-  targetId?: string;       // room index or product identifier
-  field: string;           // checklist field key
-  value: boolean | string; // booleans for yes/no; string for categorical
-}
-
-export interface ProductDecision {
-  roomId: string;
-  productName: string;
-  shouldStay: boolean;
-}
-
-export interface ScanSummary {
-  id: string;
-  createdAt: string;
-  houseTypes: HouseType[];
-  rooms: { index: number; types: RoomType[] }[];
-  products: { roomIndex: number; type: ProductType; fields: Record<string, any> }[];
-  answers: ChecklistAnswer[];
-  prosCons?: { pros: string[]; cons: string[] };
-  rawData?: any; // Store the complete server response for detailed views
-}
-
-type ScanPhase =
-  | 'idle'          // Start scan screen with house animation
-  | 'capture'       // Add room images (upload or camera)
-  | 'verify'        // Verify images before processing
-  | 'processing'    // Loading/processing images
-  | 'summary';      // Scan summary step
-
-type CaptureMode = 'upload' | 'camera';
+import type {
+  ImageRef,
+  ProductDecision,
+  ScanSummary,
+  ScanPhase,
+  CaptureMode,
+  ScanState as State,
+} from '../types/scan-context';
 
 // Helper function to generate generic room names
 const getRoomName = (index: number) => `Room ${index + 1}`;
-
-interface State {
-  phase: ScanPhase;
-  captureMode: CaptureMode;
-  currentRoomIndex: number;
-  currentRoomName: string;
-  totalRooms: number;
-  images: ImageRef[];
-  pendingRoomImages: ImageRef[]; // images captured for current room before commit
-  summaries: ScanSummary[];      // local history
-  activeSummaryId?: string;      // currently viewed summary
-  productDecisions: ProductDecision[]; // track user decisions on products
-  scanId?: string;               // current scan ID from server
-  address?: string;              // house address
-}
 
 const initialState: State = {
   phase: 'idle',

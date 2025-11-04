@@ -1,21 +1,8 @@
 import { createContext, useContext, useReducer, useEffect } from 'react';
 import type { ReactNode } from 'react';
-import { authAPI, type User } from '../api/auth';
+import { authAPI } from '../api';
+import type { User, AuthState, AuthContextValue } from '../types';
 import { scanSocket } from '../services/scanSocket';
-
-interface AuthState {
-  user: User | null;
-  token: string | null;
-  isLoading: boolean;
-  isAuthenticated: boolean;
-}
-
-interface AuthContextValue extends AuthState {
-  login: (email: string, password: string) => Promise<void>;
-  signup: (email: string, password: string, firstName: string, lastName: string) => Promise<void>;
-  logout: () => void;
-  refreshToken: () => Promise<void>;
-}
 
 type AuthAction =
   | { type: 'SET_LOADING'; payload: boolean }

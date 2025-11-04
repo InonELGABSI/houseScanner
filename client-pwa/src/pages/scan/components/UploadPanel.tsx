@@ -1,8 +1,5 @@
 import { useState } from 'react';
-
-interface UploadPanelProps {
-  onFilesSelected: (files: FileList) => void;
-}
+import type { UploadPanelProps } from '../../../types';
 
 export function UploadPanel({ onFilesSelected }: UploadPanelProps) {
   const [isDragging, setIsDragging] = useState(false);

@@ -1,20 +1,5 @@
 import { apiClient } from './client';
-
-export interface UserProfile {
-  id: string;
-  email: string;
-  firstName: string;
-  lastName: string;
-  role: string;
-  createdAt: string;
-}
-
-export interface UpdateUserProfile {
-  email?: string;
-  firstName?: string;
-  lastName?: string;
-  password?: string;
-}
+import type { UpdateUserProfile, UserProfile } from '../types/users';
 
 export const usersAPI = {
   // Get current user profile

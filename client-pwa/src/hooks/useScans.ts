@@ -1,45 +1,13 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { scanAPI } from './scan';
-import { authAPI } from './auth';
-import type { ScanResponse, ScanResults, ChecklistSubmission } from './scan';
+import { scanAPI } from '../api';
+import type { ChecklistSubmission, ScanResponse, ScanResults } from '../types/scan';
 
-// Authentication hooks
-export function useLogin() {
-  return useMutation({
-    mutationFn: async ({ email, password }: { email: string; password: string }) => {
-      return authAPI.login({ email, password });
-    },
-  });
-}
-
-export function useSignup() {
-  return useMutation({
-    mutationFn: async ({ 
-      email, 
-      password, 
-      firstName, 
-      lastName 
-    }: { 
-      email: string; 
-      password: string; 
-      firstName: string; 
-      lastName: string; 
-    }) => {
-      return authAPI.signup({ email, password, firstName, lastName });
-    },
-  });
-}
-
-// Scan hooks
 export function useCreateScan() {
   const queryClient = useQueryClient();
-  
+
   return useMutation<{ scanId: string; houseId: string; status: string }, Error, { houseId?: string; address?: string }>({
-    mutationFn: async (data: { houseId?: string; address?: string }) => {
-      return scanAPI.createScan(data);
-    },
+    mutationFn: (payload) => scanAPI.createScan(payload),
     onSuccess: () => {
-      // Invalidate scan history to refresh the list
       queryClient.invalidateQueries({ queryKey: ['scans'] });
     },
   });
@@ -51,24 +19,20 @@ export function useScanResults(scanId: string | undefined) {
     queryFn: () => scanAPI.getScanResults(scanId!),
     enabled: !!scanId,
     refetchInterval: (query) => {
-      // Stop polling when scan is completed or failed
       if (query.state.data?.status === 'completed' || query.state.data?.status === 'failed') {
         return false;
       }
-      return 3000; // Poll every 3 seconds while processing
+      return 3000;
     },
   });
 }
 
 export function useSubmitChecklist() {
   const queryClient = useQueryClient();
-  
+
   return useMutation<void, Error, ChecklistSubmission>({
-    mutationFn: async (data: ChecklistSubmission) => {
-      return scanAPI.submitChecklist(data);
-    },
+    mutationFn: (submission) => scanAPI.submitChecklist(submission),
     onSuccess: (_, variables) => {
-      // Invalidate scan results and summary
       queryClient.invalidateQueries({ queryKey: ['scans', variables.scanId] });
     },
   });
@@ -82,14 +46,13 @@ export function useScanHistory() {
 }
 
 export function useScanSummary(scanId: string | undefined) {
-  return useQuery<any, Error>({
+  return useQuery<unknown, Error>({
     queryKey: ['scans', scanId, 'summary'],
     queryFn: () => scanAPI.getScanSummary(scanId!),
     enabled: !!scanId,
   });
 }
 
-// Utility hook for polling scan status
 export function usePollScanStatus(scanId: string | undefined) {
   return useQuery<ScanResponse, Error>({
     queryKey: ['scans', scanId, 'status'],
@@ -106,21 +69,19 @@ export function usePollScanStatus(scanId: string | undefined) {
       if (query.state.data?.status === 'completed' || query.state.data?.status === 'failed') {
         return false;
       }
-      return 2000; // Poll every 2 seconds
+      return 2000;
     },
   });
 }
 
-// Legacy hooks for compatibility (these can be removed once components are updated)
-export function useListHistory() {
-  return useScanHistory();
-}
-
-export function usePollSummary() {
-  // This hook is no longer needed with the new architecture
+export function usePollSummary(scanId: string | undefined) {
   return useQuery({
-    queryKey: ['legacy-poll'],
+    queryKey: ['legacy-poll', scanId],
     queryFn: () => null,
     enabled: false,
   });
+}
+
+export function useListHistory() {
+  return useScanHistory();
 }
